@@ -1,0 +1,16 @@
+__pycache__/
+.ipynb_checkpoints/
+*.pyc
+.DS_Store
+.env
+*.bak3y
+
+# Raw dataset (big, not committed). Run notebook with original file from task assignment.
+data/ab_test_data.csv
+
+# Local notes, not for publication
+_PUSH_AND_RESUME.md
+
+# Original task PDF with company brand - NDA, do not publish
+Тестовое задание*.pdf
+*.pdf
