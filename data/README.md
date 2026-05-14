@@ -1,9 +1,9 @@
 # Data
 
-`ab_test_data.csv` - исходный CSV с тестового задания (1.8M строк user-day, ~80МБ).
-Не закоммичен в репозиторий из-за размера. Положи файл сюда и запускай notebook.
+`ab_test_data.csv` is the original CSV from the task assignment: 1.8M user-day rows, ~80 MB.
+It is not committed to the repository due to size and NDA. Place it here to run the notebook.
 
-Обработанные файлы (закоммичены):
-- `user_level.csv` - агрегация per user (100k строк)
+Processed files (committed):
+- `user_level.csv` - user-level aggregation (100k rows)
 - `daily.csv` - per day per group
-- `retention.csv` - D1, D3, D7, D14, D28 retention по группам
+- `retention.csv` - D1, D3, D7, D14, D28 retention by cohort day

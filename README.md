@@ -1,52 +1,50 @@
-# A/B test analysis: GameDev feature rollout
+# A/B Test Analysis: Mobile Game Feature Rollout
 
-Разбор A/B-эксперимента в мобильной игре. Тестовое задание от игровой студии (бренд скрыт по NDA, данные обезличены, представлены в виде CSV с обобщёнными колонками).
+Analysis of an A/B experiment in a mobile game. Test assignment for a game studio (brand hidden under NDA, data anonymized). 59-day period, 100k users, two groups roughly 50/50. Goal: measure feature impact on revenue, engagement, retention, and recommend whether to ship B.
 
-Период эксперимента: 59 дней (1 января - 28 февраля 2025). 100 тысяч юзеров, две группы A и B примерно поровну. Задача - оценить эффект новой фичи на доход, вовлечённость и удержание, и дать рекомендацию по rollout.
+## TL;DR
 
-## Главное
+Group B shows **+9.21% ARPU lift** versus control A. Statistically significant (Welch t-test p < 0.001, bootstrap CI [+0.30, +0.71], 5000 iterations), stable across days and across the payer distribution.
 
-Группа B даёт **+9.21% к ARPU** в сравнении с контролем A. Эффект статистически значимый (Welch p < 0.001, bootstrap CI [+0.30; +0.71], 5000 итераций), устойчивый по дням и по распределению плательщиков.
+The driver is ARPPU (+10.85%), not conversion. Existing payers spend more in B, but the test did not bring new payers in.
 
-Драйвер роста дохода - ARPPU (+10.85%), не конверсия. То есть платящие в B тратят больше, при этом новых плательщиков не стало.
+**Retention in B is significantly lower on early days:** D1 -3.4%, D3 -5.5%, D7 -4.3% (all p < 0.001). By D14 the gap disappears. The feature monetizes users who stay, but pushes some users out earlier.
 
-**Retention в B значимо ниже на ранних днях:** D1 -3.4%, D3 -5.5%, D7 -4.3% (все p < 0.001). На D14 и далее разница сходит на нет. То есть фича B монетизирует тех кто остаётся, но часть юзеров уходит раньше.
+**Recommendation: do not ship B as is.** Investigate what in the feature drives the D1-D7 churn, build B2 with the early friction removed, run a fresh test. If shipping anyway is mandatory, monitor early retention closely and be ready to roll back.
 
-**Рекомендация:** не катить B как есть. Лучше понять что в фиче "выталкивает" юзеров на D1-D7, и запустить B2 без этой просадки. Если катить - то с активным мониторингом early retention.
+## Metrics
 
-## Метрики
-
-| Метрика | A | B | Lift | p-value | Значимо? |
+| Metric | A | B | Lift | p-value | Significant? |
 |---|---|---|---|---|---|
-| ARPU, $ | 5.45 | 5.95 | +9.21% | <0.001 | Да |
-| ARPPU, $ | 32.86 | 36.42 | +10.85% | <0.001 | Да |
-| Conversion to payer, % | 16.59 | 16.35 | -1.48% | 0.29 | Нет |
-| Sessions per user | 34.1 | 36.4 | +6.75% | <0.001 | Да |
-| Time, min | 1089 | 1191 | +9.36% | <0.001 | Да |
-| Active days | 18.15 | 18.04 | -0.57% | 0.02 | На грани |
-| **D1 retention, %** | **41.25** | **39.84** | **-3.43%** | **<0.001** | **Да** |
-| **D3 retention, %** | **36.55** | **34.52** | **-5.54%** | **<0.001** | **Да** |
-| **D7 retention, %** | **32.14** | **30.77** | **-4.26%** | **<0.001** | **Да** |
-| D14 retention, % | 29.74 | 29.66 | -0.28% | 0.78 | Нет |
-| D28 retention, % | 29.63 | 29.62 | -0.00% | 1.00 | Нет |
+| ARPU, $ | 5.45 | 5.95 | +9.21% | <0.001 | Yes |
+| ARPPU, $ | 32.86 | 36.42 | +10.85% | <0.001 | Yes |
+| Conversion to payer, % | 16.59 | 16.35 | -1.48% | 0.29 | No |
+| Sessions per user | 34.1 | 36.4 | +6.75% | <0.001 | Yes |
+| Time, min | 1089 | 1191 | +9.36% | <0.001 | Yes |
+| Active days | 18.15 | 18.04 | -0.57% | 0.02 | Borderline |
+| **D1 retention, %** | **41.25** | **39.84** | **-3.43%** | **<0.001** | **Yes** |
+| **D3 retention, %** | **36.55** | **34.52** | **-5.54%** | **<0.001** | **Yes** |
+| **D7 retention, %** | **32.14** | **30.77** | **-4.26%** | **<0.001** | **Yes** |
+| D14 retention, % | 29.74 | 29.66 | -0.28% | 0.78 | No |
+| D28 retention, % | 29.63 | 29.62 | -0.00% | 1.00 | No |
 
-## Как запустить
+## How to run
 
 ```bash
 pip install pandas numpy scipy statsmodels matplotlib jupyter
 jupyter notebook notebook/ab_test_analysis.ipynb
 ```
 
-Запускать ячейки по порядку. Всё работает на `data/ab_test_data.csv` (см. `data/README.md` про размещение исходника).
+Run cells in order. The notebook reads `data/ab_test_data.csv`. See `data/README.md` for the raw file (not committed, ~80 MB).
 
-## Что внутри
+## Repo layout
 
 ```
 .
 ├── README.md
 ├── data/
-│   ├── ab_test_data.csv (1.8M строк user-day, ~80 МБ, не закоммичен)
-│   ├── user_level.csv (агрегация per user)
+│   ├── ab_test_data.csv (1.8M user-day rows, ~80 MB, not committed)
+│   ├── user_level.csv (user-level aggregation)
 │   ├── daily.csv (per day per group)
 │   └── retention.csv (D1, D3, D7, D14, D28)
 ├── notebook/
@@ -60,37 +58,39 @@ jupyter notebook notebook/ab_test_analysis.ipynb
     └── 06_retention_curve.png
 ```
 
-## Подход в двух словах
+## Approach in a nutshell
 
-Юнит анализа - юзер, не user-day. Это важно: сплит делается по user_id, а наблюдения внутри одного юзера зависимы. Если ставить t-test на 1.8M строк user-day, получишь искусственно низкие p-value и ложные срабатывания. Поэтому агрегирую `groupby user_id` и работаю с user-level метриками.
+Unit of analysis is the user, not user-day. The split happens by `user_id`, and observations from the same user are correlated over days. Running a t-test on 1.8M user-day rows would yield artificially low p-values and false positives. I aggregate `groupby user_id` and run all tests at the user level.
 
-Стат-тесты:
-- ARPU и engagement - Welch t-test + bootstrap (5000 итераций) для устойчивости к скошенному распределению
-- Конверсия - z-test для пропорций
-- Retention по дням - z-test для пропорций когортно
-- Mann-Whitney параллельно для cross-check, но на ARPU он нечувствителен (медиана = 0 в обеих группах)
+Statistical tests:
+- ARPU and engagement: Welch t-test plus bootstrap (5000 iterations) for robustness against the skewed revenue distribution
+- Conversion to payer: two-proportion z-test
+- Retention by cohort day: two-proportion z-test per day
+- Mann-Whitney as a cross-check, but on ARPU it is insensitive because the median is 0 in both groups (5/6 users do not pay), so the right-tail shift is invisible to it. I trust Welch plus bootstrap for the revenue metric.
 
 Sanity checks:
-- SRM: chi-square на размер групп, p = 0.51, ок
-- Юзер строго в одной группе
-- Пропусков нет
-- ARPDAU и cumulative revenue по дням - эффект устойчивый
-- Перцентили revenue per paying user - сдвиг по всему распределению, не пара китов
+- SRM via chi-square on group sizes, p = 0.51, ok
+- Each user is strictly in one group
+- No missing values
+- ARPDAU and cumulative revenue plotted per day, the effect is stable
+- Percentiles of revenue per paying user shift across p50, p75, p90, p95, so the lift is systemic and not driven by a few whales
 
-## Что бы доделал с большим временем
+## What I would do with more time
 
-- Сегментация по first_seen (новые vs retained). Гипотеза: просадка retention в B сидит в новичках, у retained эффект чисто положительный
-- CUPED с pre-period revenue - сузит CI на ARPU
-- Дневной SRM, не только итоговый
-- Винзоризация revenue на p99 и пересчёт - убедиться что ARPU не вытянут хвостом
+- Segment effect by `first_seen` (new vs retained users). Hypothesis: the retention drop in B sits in new users, while retained users show a clean positive effect
+- CUPED with pre-period revenue as a covariate to narrow the ARPU CI
+- Daily SRM check, not just the final one
+- Winsorize revenue at p99 and recompute, to confirm ARPU lift is not pulled by the tail
 
-## Замечание про процесс
+These would be done before a final ship decision in a real project.
 
-Большую часть кода и оформления делал в паре с Claude (Anthropic) как с pair-programmer. Архитектуру анализа, выбор метрик, интерпретацию результатов и проверку логики держал на себе. AI-tooling для меня стандартная часть workflow, ускоряет рутину и помогает не пропустить очевидное. Финальные выводы (например, что rollout B как есть рискован из-за retention) - моя зона.
+## Note on process
 
-## Дисклеймер
+Much of the code and write-up was done in pair with Claude (Anthropic) as a pair-programmer. Architecture, metric selection, interpretation, and the validity check of every step stayed with me. AI tooling is a standard part of my workflow, it speeds up scaffolding and helps not miss obvious issues. The final calls (for example, that shipping B as-is is risky because of the retention drop) are mine.
 
-Данные обезличены и публикуются как портфолио-кейс. Названия игры, студии и фичи скрыты по NDA. Структура датасета и метрики переданы без изменений, чтобы анализ был воспроизводимым.
+## Disclaimer
+
+Data is anonymized and published as a portfolio case. Game name, studio name, and the feature itself are hidden under NDA. The dataset structure and metrics are kept untouched so the analysis is reproducible by any reader.
 
 ---
 
