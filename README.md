@@ -95,5 +95,5 @@ Data is anonymized and published as a portfolio case. Game name, studio name, an
 ---
 
 Author: Daniil Glotov
-Email: prog.gdd@gmail.com
+Email: gddviet@gmail.com
 Telegram: @glotov_daniil
