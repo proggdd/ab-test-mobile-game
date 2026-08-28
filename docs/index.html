@@ -1,0 +1,1160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ship or Hold - A/B test readout</title>
+<meta name="description" content="A/B test readout for a mobile game feature: revenue up 9.2%, early retention down, and the case for holding the release.">
+<meta name="author" content="Daniil Glotov">
+<meta property="og:title" content="Ship or Hold - A/B test readout">
+<meta property="og:description" content="A/B test readout for a mobile game feature: revenue up 9.2%, early retention down, and the case for holding the release.">
+<meta property="og:type" content="article">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>*{margin:0}</style>
+</head>
+<body>
+<title>Ship or Hold</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+/* ------------------------------------------------------------------ tokens
+   Light is the base. Dark is a selected set of steps, declared twice:
+   once for the OS setting, once for the explicit toggle, so either can win. */
+:root {
+  color-scheme: light;
+  --plane:      #f9f9f7;
+  --surface:    #fcfcfb;
+  --ink:        #0b0b0b;
+  --ink-2:      #52514e;
+  --muted:      #6e6c66;
+  --grid:       #e1e0d9;
+  --axis:       #c3c2b7;
+  --hairline:   rgba(11, 11, 11, 0.10);
+  --a:          #2a78d6;   /* control, group A */
+  --link:       #1c62b5;   /* text blue; darker than the series blue for AA */
+  --b:          #eb6834;   /* treatment, group B */
+  --good:       #0ca30c;
+  --warning:    #fab219;
+  --serious:    #ec835a;
+  --critical:   #d03b3b;
+  --pos-text:   #006300;
+  --neg-text:   #a32a2a;
+  --wash:       rgba(42, 120, 214, 0.08);
+  --shadow:     0 1px 2px rgba(11, 11, 11, .04), 0 8px 24px -12px rgba(11, 11, 11, .12);
+  --r-card:     14px;
+  --r-pill:     999px;
+  --r-input:    8px;
+  --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SFMono-Regular", "Cascadia Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --plane:    #0d0d0d;
+    --surface:  #1a1a19;
+    --ink:      #ffffff;
+    --ink-2:    #c3c2b7;
+    --muted:    #898781;
+    --grid:     #2c2c2a;
+    --axis:     #383835;
+    --hairline: rgba(255, 255, 255, 0.10);
+    --a:        #3987e5;
+    --link:     #3987e5;
+    --b:        #d95926;
+    --pos-text: #0ca30c;
+    --neg-text: #e66767;
+    --wash:     rgba(57, 135, 229, 0.12);
+    --shadow:   0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -12px rgba(0, 0, 0, .7);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:    #0d0d0d;
+  --surface:  #1a1a19;
+  --ink:      #ffffff;
+  --ink-2:    #c3c2b7;
+  --muted:    #898781;
+  --grid:     #2c2c2a;
+  --axis:     #383835;
+  --hairline: rgba(255, 255, 255, 0.10);
+  --a:        #3987e5;
+  --link:     #3987e5;
+  --b:        #d95926;
+  --pos-text: #0ca30c;
+  --neg-text: #e66767;
+  --wash:     rgba(57, 135, 229, 0.12);
+  --shadow:   0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -12px rgba(0, 0, 0, .7);
+}
+
+/* ------------------------------------------------------------------ base */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { margin: 0; letter-spacing: -0.02em; line-height: 1.12; font-weight: 600; }
+h1 { font-size: clamp(2rem, 5.2vw, 3.5rem); letter-spacing: -0.035em; }
+h2 { font-size: clamp(1.5rem, 3vw, 2.125rem); }
+h3 { font-size: 1.0625rem; letter-spacing: -0.01em; }
+p  { margin: 0; }
+a  { color: var(--link); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--a); outline-offset: 3px; border-radius: 4px;
+}
+.wrap { width: min(1180px, 100% - 3rem); margin-inline: auto; }
+@media (max-width: 640px) { .wrap { width: calc(100% - 2rem); } }
+
+.lede { color: var(--ink-2); max-width: 62ch; font-size: 1.0625rem; }
+.note { color: var(--muted); font-size: 0.8125rem; line-height: 1.5; }
+.num  { font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------------ header */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  height: 64px; display: flex; align-items: center;
+  background: color-mix(in srgb, var(--plane) 86%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--hairline);
+}
+.topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.brand { display: flex; align-items: baseline; gap: .6rem; min-width: 0; }
+.brand b { font-weight: 600; font-size: .9375rem; letter-spacing: -.01em; white-space: nowrap; }
+.brand span { color: var(--muted); font-size: .8125rem; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.topbar nav { display: flex; align-items: center; gap: .25rem; }
+.tlink {
+  color: var(--ink-2); text-decoration: none; font-size: .875rem;
+  padding: .4rem .65rem; border-radius: var(--r-input); white-space: nowrap;
+}
+.tlink:hover { color: var(--ink); background: var(--wash); }
+.theme-btn {
+  display: inline-flex; align-items: center; gap: .45rem;
+  height: 34px; padding: 0 .75rem;
+  font: 500 .8125rem/1 var(--sans); color: var(--ink-2);
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--r-pill); cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.theme-btn:hover { color: var(--ink); border-color: var(--axis); }
+.theme-btn:active { transform: translateY(1px); }
+/* two overlapping circles: a filled disc in light, a crescent in dark */
+.theme-btn .glyph {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--ink-2); position: relative; overflow: hidden; flex: none;
+}
+.theme-btn .glyph::after {
+  content: ""; position: absolute; inset: -4px -3px -4px 4px;
+  border-radius: 50%; background: var(--surface); opacity: 0;
+}
+:root[data-theme="dark"] .theme-btn .glyph::after { opacity: 1; }
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .theme-btn .glyph::after { opacity: 1; }
+}
+@media (max-width: 720px) { .brand span, .tlink { display: none; } }
+
+/* ------------------------------------------------------------------ hero */
+.hero { padding: clamp(3rem, 8vw, 6rem) 0 2.5rem; }
+.hero-grid {
+  display: grid; gap: clamp(2rem, 5vw, 4rem);
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  align-items: end;
+}
+@media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; align-items: start; } }
+.verdict-pill {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .3rem .8rem .3rem .55rem; margin-bottom: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--critical) 40%, transparent);
+  background: color-mix(in srgb, var(--critical) 10%, var(--surface));
+  border-radius: var(--r-pill);
+  font-size: .8125rem; font-weight: 500; color: var(--ink);
+}
+.verdict-pill .mark { width: 1.05em; height: 1.05em; color: var(--critical); }
+.hero h1 .em { color: var(--critical); }
+.hero .lede { margin-top: 1.25rem; }
+.hero-figure {
+  border-left: 1px solid var(--b); padding-left: 1.25rem;
+}
+.hero-figure .val {
+  font-size: clamp(3rem, 7vw, 4.25rem); font-weight: 600;
+  letter-spacing: -0.04em; line-height: 1; color: var(--ink);
+}
+.hero-figure .cap { margin-top: .5rem; color: var(--ink-2); font-size: .9375rem; max-width: 30ch; }
+.hero-figure .sub { margin-top: .35rem; }
+
+/* ------------------------------------------------------------------ kpi strip */
+.kpis {
+  display: grid; gap: 1px; background: var(--hairline);
+  border-block: 1px solid var(--hairline);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .kpis { grid-template-columns: 1fr; } }
+.kpi { background: var(--plane); padding: 1.5rem 1.25rem 1.35rem; }
+.kpi .label { color: var(--ink-2); font-size: .8125rem; }
+.kpi .value { margin-top: .5rem; font-size: 1.75rem; font-weight: 600; letter-spacing: -.025em; line-height: 1; }
+.kpi .meta { margin-top: .6rem; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .75rem; font-weight: 500; padding: .15rem .5rem;
+  border-radius: var(--r-pill); border: 1px solid var(--hairline); color: var(--ink-2);
+  white-space: nowrap;
+}
+.tag.pos { color: var(--pos-text); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+.tag.neg { color: var(--neg-text); border-color: color-mix(in srgb, var(--critical) 35%, transparent); }
+.tag .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* ------------------------------------------------------------------ sections */
+section.block { padding: clamp(3.5rem, 7vw, 5.5rem) 0; border-bottom: 1px solid var(--hairline); }
+.head { max-width: 68ch; margin-bottom: 2.25rem; }
+.head p { margin-top: .85rem; }
+
+/* integrity: a checked list, read top to bottom */
+.facts { margin-top: 2rem; border-top: 1px solid var(--hairline); }
+.fact {
+  display: grid; grid-template-columns: minmax(0, 21rem) minmax(0, 1fr);
+  gap: .4rem 2.5rem; align-items: baseline;
+  padding: 1.05rem 0; border-bottom: 1px solid var(--hairline);
+}
+@media (max-width: 820px) { .fact { grid-template-columns: 1fr; } }
+.fact .t { display: flex; align-items: center; gap: .55rem; font-weight: 500; font-size: .9375rem; }
+.fact .t .icon { color: var(--pos-text); width: 1.05em; height: 1.05em; }
+.fact .v {
+  margin-left: auto; padding-left: 1rem; white-space: nowrap;
+  font-family: var(--mono); font-size: .8125rem; color: var(--ink-2);
+}
+.fact p { color: var(--ink-2); font-size: .9375rem; }
+
+/* chart card */
+.card {
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--r-card); padding: 1.35rem 1.35rem 1.1rem; box-shadow: var(--shadow);
+}
+.card > header { margin-bottom: 1.1rem; }
+.card > header .sub { margin-top: .3rem; }
+.two-up { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 940px) { .two-up { grid-template-columns: 1fr; } }
+.chart-side { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 940px) { .chart-side { grid-template-columns: 1fr; } }
+
+.callout {
+  border-left: 1px solid var(--a); padding: .15rem 0 .15rem 1.15rem;
+}
+.callout .big { font-size: 1.5rem; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.callout p { margin-top: .55rem; color: var(--ink-2); font-size: .9375rem; }
+.callout + .callout { margin-top: 1.6rem; }
+
+/* legend */
+.legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: .9rem; }
+.legend .item { display: inline-flex; align-items: center; gap: .45rem; font-size: .8125rem; color: var(--ink-2); }
+.legend .key { width: 14px; height: 3px; border-radius: 2px; flex: none; }
+.legend .key.dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* svg chart chrome */
+.plot { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
+.plot .grid-line { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+.plot .axis-line { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+.plot .tick { fill: var(--muted); font-size: 11px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.plot .dlabel { fill: var(--ink); font-size: 12px; font-weight: 500; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.plot .dlabel.soft { fill: var(--ink-2); font-weight: 400; }
+.plot .series-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.plot .marker { stroke: var(--surface); stroke-width: 2; }
+.plot .crosshair { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+.plot .bar { stroke: none; }
+.chart-holder { position: relative; }
+
+/* tooltip */
+.tip {
+  position: absolute; z-index: 5; pointer-events: none; opacity: 0;
+  transform: translate(-50%, -100%);
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--hairline); border-radius: var(--r-input);
+  box-shadow: var(--shadow); padding: .5rem .65rem;
+  font-size: .8125rem; line-height: 1.45; white-space: nowrap;
+  transition: opacity .12s ease;
+}
+.tip.on { opacity: 1; }
+.tip .th { font-weight: 600; margin-bottom: .3rem; }
+.tip .row { display: flex; align-items: center; gap: .45rem; font-variant-numeric: tabular-nums; }
+.tip .row .k { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.tip .row .n { margin-left: auto; padding-left: 1rem; font-weight: 500; }
+
+/* icons: one stroke weight, one grid, drawn once and referenced */
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.icon {
+  width: 1em; height: 1em; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* data table twin */
+details.table-twin { margin-top: 1rem; border-top: 1px solid var(--hairline); padding-top: .75rem; }
+details.table-twin summary {
+  cursor: pointer; font-size: .8125rem; color: var(--ink-2); list-style: none;
+  display: inline-flex; align-items: center; gap: .4rem; padding: .2rem 0;
+}
+details.table-twin summary::-webkit-details-marker { display: none; }
+details.table-twin summary .icon {
+  color: var(--muted); width: .95em; height: .95em; transition: transform .18s ease;
+}
+details.table-twin[open] summary .icon { transform: rotate(90deg); }
+details.table-twin summary:hover { color: var(--ink); }
+details.table-twin summary:hover .icon { color: var(--ink-2); }
+.tw {
+  overflow: auto; margin-top: .75rem; max-height: 21rem;
+  overscroll-behavior: contain;   /* long series stay inside the card */
+}
+table { border-collapse: collapse; width: 100%; font-size: .8125rem; }
+th, td { text-align: right; padding: .4rem .7rem; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--ink-2); font-weight: 500; position: sticky; top: 0; background: var(--surface); }
+tbody td { font-variant-numeric: tabular-nums; color: var(--ink); }
+tbody tr:last-child td { border-bottom: 0; }
+
+/* comparison rows (ARPPU vs conversion) */
+.compare { display: grid; gap: 1rem; }
+.crow {
+  display: grid; gap: .35rem .9rem; align-items: baseline;
+  grid-template-columns: minmax(0, 1fr) auto;
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--r-card); padding: 1.1rem 1.2rem;
+}
+.crow .name { font-weight: 500; }
+.crow .delta { font-size: 1.375rem; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.crow .why { grid-column: 1 / -1; color: var(--ink-2); font-size: .875rem; margin-top: .2rem; }
+.crow .ab { grid-column: 1 / -1; display: flex; gap: 1.25rem; margin-top: .5rem; font-size: .8125rem; color: var(--ink-2); }
+.crow .ab span { display: inline-flex; align-items: center; gap: .4rem; font-variant-numeric: tabular-nums; }
+.crow .ab i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+/* decision */
+.decision { display: grid; gap: 2.5rem; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+@media (max-width: 900px) { .decision { grid-template-columns: 1fr; } }
+.steps { display: grid; gap: 1.1rem; margin-top: 1.5rem; }
+.step {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .9rem; align-items: start;
+}
+.step .n {
+  width: 24px; height: 24px; border-radius: 50%; flex: none; margin-top: 1px;
+  background: var(--wash); color: var(--link);
+  font: 600 .75rem/24px var(--sans); font-variant-numeric: tabular-nums; text-align: center;
+}
+.step b { font-weight: 500; }
+.step p { color: var(--ink-2); font-size: .9375rem; margin-top: .2rem; }
+.tradeoff { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-card); padding: 1.5rem; }
+.tradeoff dl { margin: 0; display: grid; gap: 1.1rem; }
+.tradeoff dt { font-size: .8125rem; color: var(--ink-2); }
+.tradeoff dd { margin: .25rem 0 0; font-size: 1.0625rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* footer */
+footer.foot { padding: 3rem 0 4rem; color: var(--ink-2); font-size: .875rem; }
+.foot-grid { display: grid; gap: 2rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 780px) { .foot-grid { grid-template-columns: 1fr; } }
+.foot h3 { font-size: .8125rem; font-weight: 500; color: var(--ink); margin-bottom: .6rem; }
+.foot ul { margin: 0; padding: 0; list-style: none; display: grid; gap: .35rem; }
+
+/* motion: narrative sequence only, and only when the reader has not opted out */
+@media (prefers-reduced-motion: no-preference) {
+  .plot .draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); }
+  .plot .draw.in { stroke-dashoffset: 0; transition: stroke-dashoffset 1s cubic-bezier(.16,1,.3,1); }
+  .plot .fade { opacity: 0; }
+  .plot .fade.in { opacity: 1; transition: opacity .45s ease .35s; }
+}
+</style>
+
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.7 12.7 9.6 17.6 19.4 6.9"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.7v5.1"/><path d="M12 16.3h.01"/></symbol>
+  <symbol id="i-caret" viewBox="0 0 24 24"><path d="M9.5 5.8 15.7 12l-6.2 6.2"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <b>Ship or Hold</b>
+      <span>A/B test readout, mobile game feature</span>
+    </div>
+    <nav>
+      <a class="tlink" href="https://github.com/proggdd/ab-test-mobile-game">Notebook and data</a>
+      <button class="theme-btn" id="theme" type="button">
+        <span class="glyph" aria-hidden="true"></span><span id="theme-label">Dark</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ------------------------------------------------------------- hero -->
+  <div class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="verdict-pill"><svg class="icon mark" aria-hidden="true"><use href="#i-alert"></use></svg>Recommendation: hold</span>
+        <h1>The feature makes money. <br><span class="em">Do not ship it yet.</span></h1>
+        <p class="lede" id="hero-lede"></p>
+      </div>
+      <div class="hero-figure">
+        <div class="val num" id="hero-val"></div>
+        <p class="cap" id="hero-cap"></p>
+        <p class="note sub" id="hero-sub"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="kpis" id="kpis"></div>
+  </div>
+
+  <!-- --------------------------------------------------- 1. is it valid -->
+  <section class="block reveal">
+    <div class="wrap">
+      <div class="head">
+        <h2>First question: can the result be trusted at all?</h2>
+        <p class="lede">A lift is only worth reading once assignment, coverage and data quality check out.
+          Four gates, all cleared before any metric was compared.</p>
+      </div>
+      <div class="facts" id="facts"></div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------ 2. the money -->
+  <section class="block reveal">
+    <div class="wrap">
+      <div class="head">
+        <h2>Revenue moved, and it kept moving</h2>
+        <p class="lede">Daily revenue per active user runs noisy, so the honest read is the accumulated
+          gap. It widens steadily instead of arriving in one spike, which rules out a single promotion day.</p>
+      </div>
+      <div class="two-up">
+        <div class="card">
+          <header>
+            <h3>Revenue per daily active user</h3>
+            <p class="note sub">ARPDAU by calendar day, both groups</p>
+          </header>
+          <div id="c-arpdau"></div>
+        </div>
+        <div class="card">
+          <header>
+            <h3>Accumulated revenue gap</h3>
+            <p class="note sub">Group B total minus group A total, running</p>
+          </header>
+          <div id="c-cumgap"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------ 3. how sure are we -->
+  <section class="block reveal">
+    <div class="wrap">
+      <div class="head">
+        <h2>How sure are we about the size of the lift?</h2>
+        <p class="lede">Revenue is heavily right skewed, so a t interval alone would be optimistic.
+          Resampling both groups puts a range on the difference rather than a single number.</p>
+      </div>
+      <div class="chart-side">
+        <div class="card">
+          <header>
+            <h3>Bootstrap distribution of the ARPU difference</h3>
+            <p class="note sub" id="boot-sub"></p>
+          </header>
+          <div id="c-boot"></div>
+        </div>
+        <div>
+          <div class="callout">
+            <div class="big" id="boot-ci"></div>
+            <p>95% confidence interval for the per-user revenue difference. The whole interval sits
+              above zero, so the direction is not in question.</p>
+          </div>
+          <div class="callout">
+            <div class="big" id="boot-share"></div>
+            <p>of resamples put group B ahead. The uncertainty is about how large the gain is,
+              not whether it exists.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------- 4. where money comes from -->
+  <section class="block reveal">
+    <div class="wrap">
+      <div class="head">
+        <h2>The gain came from existing payers, not from new ones</h2>
+        <p class="lede">This is the part that changes what the feature actually is. Nobody new started
+          paying. The people already paying paid more, at every point of the spending distribution.</p>
+      </div>
+      <div class="chart-side">
+        <div class="compare" id="decomp"></div>
+        <div class="card">
+          <header>
+            <h3>Spend per payer by percentile</h3>
+            <p class="note sub">A shift across the whole curve, not a few large accounts</p>
+          </header>
+          <div id="c-pct"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- 5. the cost -->
+  <section class="block reveal">
+    <div class="wrap">
+      <div class="head">
+        <h2>And here is what it cost</h2>
+        <p class="lede">Early retention drops for a full week before the curves meet again. Players who
+          would have stayed left in the first days, and the revenue gain is measured on the ones who remained.</p>
+      </div>
+      <div class="card">
+        <header>
+          <h3>Cohort retention by day</h3>
+          <p class="note sub">Share of each group still active on day N</p>
+        </header>
+        <div id="c-ret"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ----------------------------------------------------- 6. decision -->
+  <section class="block reveal">
+    <div class="wrap">
+      <div class="head">
+        <h2>The call</h2>
+      </div>
+      <div class="decision">
+        <div>
+          <p class="lede">Shipping B trades a durable asset for a measurable one. The revenue gain is real
+            and repeatable. The churn is also real, and it is spent up front on players who never come back
+            to be counted. A feature that earns more from a shrinking base is not the same feature as one
+            that earns more.</p>
+          <p class="lede" style="margin-top:1rem">The gap closes by day 14, which is the argument for shipping.
+            It closes because the players who would have widened it are already gone, which is the argument against.</p>
+          <div class="steps">
+            <div class="step">
+              <span class="n">1</span>
+              <div><b>Find the friction</b>
+                <p>The loss is concentrated in days 1 to 7. Session logs from the first three days of the
+                  treatment arm will show which step players leave from.</p></div>
+            </div>
+            <div class="step">
+              <span class="n">2</span>
+              <div><b>Build B2 without that step</b>
+                <p>Keep the monetisation change, remove or soften whatever drives the early exit,
+                  then test again on a fresh cohort.</p></div>
+            </div>
+            <div class="step">
+              <span class="n">3</span>
+              <div><b>If launch is mandatory, launch instrumented</b>
+                <p>Staged rollout with day 1 retention as the stopping rule, and a rollback path
+                  agreed before the first cohort is exposed.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="tradeoff">
+          <dl id="tradeoff"></dl>
+          <p class="note" style="margin-top:1.4rem" id="tradeoff-note"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-grid">
+    <div>
+      <h3>Method</h3>
+      <ul>
+        <li>Welch t-test on user level aggregates</li>
+        <li>Percentile bootstrap, <span id="m-iters" class="num"></span> resamples</li>
+        <li>Two-proportion z-test for rates</li>
+        <li>Chi-square sample ratio check</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Data</h3>
+      <ul>
+        <li id="m-scope"></li>
+        <li id="m-window"></li>
+        <li>Anonymised portfolio dataset</li>
+        <li><a href="https://github.com/proggdd/ab-test-mobile-game">Notebook and source data</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Analyst</h3>
+      <ul>
+        <li>Daniil Glotov</li>
+        <li><a href="https://github.com/proggdd">github.com/proggdd</a></li>
+        <li><a href="https://linkedin.com/in/daniil-glotov">linkedin.com/in/daniil-glotov</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="wrap" style="margin-top:2rem">
+    <p class="note">Every figure on this page is recomputed from the source CSVs by
+      <span style="font-family:var(--mono)">scripts/prepare_data.py</span>; nothing is transcribed by hand.</p>
+  </div>
+</footer>
+
+<script>
+const DATA = {"meta":{"source_repo":"github.com/proggdd/ab-test-mobile-game","users":100000,"days":59,"date_start":"2025-01-01","date_end":"2025-02-28","total_revenue":570386.6,"bootstrap_iters":5000,"seed":20250816},"srm":{"n_a":49897,"n_b":50103,"share_a":49.897000000000006,"share_b":50.102999999999994,"chi2":0.42436,"p":0.5147694677041095,"passed":true},"revenue":{"arpu":{"a":5.4523039461290255,"b":5.954393748877313,"lift_pct":9.208763996085656,"abs_diff":0.5020898027482872,"p":1.492630725946675e-06,"test":"Welch t-test","n_a":49897,"n_b":50103},"arppu":{"a":32.85671618357488,"b":36.422047369063606,"lift_pct":10.851148865786648,"abs_diff":3.5653311854887235,"p":2.9528412201656386e-19,"test":"Welch t-test","n_a":8280,"n_b":8191},"conversion":{"a":16.594184019079304,"b":16.348322455741172,"lift_pct":-1.4816128533674662,"abs_diff_pp":-0.24586156333812892,"p":0.2946165775011421,"z":-1.0480478152895014,"test":"Two-proportion z-test","n_a":49897,"n_b":50103}},"engagement":{"sessions":{"a":34.12433613243281,"b":36.42682074925653,"lift_pct":6.747338931043314,"abs_diff":2.302484616823719,"p":7.939289961788424e-140,"test":"Welch t-test","n_a":49897,"n_b":50103},"time":{"a":1088.7366515020944,"b":1190.6462048180747,"lift_pct":9.360349279633322,"abs_diff":101.90955331598025,"p":8.944136345164215e-286,"test":"Welch t-test","n_a":49897,"n_b":50103},"active_days":{"a":18.145399523017417,"b":18.04205337005768,"lift_pct":-0.5695446541623016,"abs_diff":-0.10334615295973748,"p":0.018858937965537264,"test":"Welch t-test","n_a":49897,"n_b":50103}},"percentiles":[{"q":50,"a":26.89,"b":29.95,"lift_pct":11.379695053923387},{"q":75,"a":44.26,"b":48.745000000000005,"lift_pct":10.133303208314521},{"q":90,"a":65.09200000000001,"b":72.23,"lift_pct":10.966017329318486},{"q":95,"a":79.03499999999993,"b":88.22999999999999,"lift_pct":11.634086164357656},{"q":99,"a":116.28199999999983,"b":126.00200000000008,"lift_pct":8.358989353468523}],"bootstrap":{"iters":5000,"ci_low":0.29974306626997693,"ci_high":0.7104438878582822,"point":0.5020898027482872,"share_above_zero":1.0,"hist":{"counts":[1,0,4,1,2,6,14,8,14,29,35,70,75,90,107,131,191,204,216,250,299,305,333,312,316,326,272,277,204,197,167,126,116,80,66,48,36,17,19,14,8,6,2,4,0,0,1,1],"edges":[0.11147,0.1283,0.14514,0.16197,0.17881,0.19564,0.21248,0.22931,0.24615,0.26298,0.27982,0.29666,0.31349,0.33033,0.34716,0.364,0.38083,0.39767,0.4145,0.43134,0.44817,0.46501,0.48184,0.49868,0.51552,0.53235,0.54919,0.56602,0.58286,0.59969,0.61653,0.63336,0.6502,0.66703,0.68387,0.7007,0.71754,0.73438,0.75121,0.76805,0.78488,0.80172,0.81855,0.83539,0.85222,0.86906,0.88589,0.90273,0.91956]}},"daily":{"dates":["2025-01-01","2025-01-02","2025-01-03","2025-01-04","2025-01-05","2025-01-06","2025-01-07","2025-01-08","2025-01-09","2025-01-10","2025-01-11","2025-01-12","2025-01-13","2025-01-14","2025-01-15","2025-01-16","2025-01-17","2025-01-18","2025-01-19","2025-01-20","2025-01-21","2025-01-22","2025-01-23","2025-01-24","2025-01-25","2025-01-26","2025-01-27","2025-01-28","2025-01-29","2025-01-30","2025-01-31","2025-02-01","2025-02-02","2025-02-03","2025-02-04","2025-02-05","2025-02-06","2025-02-07","2025-02-08","2025-02-09","2025-02-10","2025-02-11","2025-02-12","2025-02-13","2025-02-14","2025-02-15","2025-02-16","2025-02-17","2025-02-18","2025-02-19","2025-02-20","2025-02-21","2025-02-22","2025-02-23","2025-02-24","2025-02-25","2025-02-26","2025-02-27","2025-02-28"],"arpdau_a":[0.33318,0.31963,0.27963,0.31518,0.35579,0.26253,0.31691,0.27805,0.32055,0.29182,0.30979,0.32764,0.30683,0.29436,0.26723,0.32877,0.31962,0.2997,0.24143,0.28132,0.32534,0.31292,0.31803,0.25998,0.33721,0.25417,0.32898,0.30713,0.29149,0.32144,0.3044,0.29733,0.26034,0.32844,0.33671,0.30722,0.27501,0.25694,0.30183,0.3293,0.27854,0.30383,0.28854,0.27707,0.27496,0.34789,0.32033,0.26233,0.31497,0.29811,0.3217,0.3065,0.34736,0.26715,0.22075,0.28188,0.35138,0.31307,0.25035],"arpdau_b":[0.35075,0.39539,0.30436,0.3179,0.36338,0.35649,0.3336,0.31453,0.31115,0.32712,0.34191,0.3477,0.32418,0.29318,0.32029,0.32406,0.32581,0.33578,0.36194,0.34565,0.4268,0.2997,0.32619,0.28338,0.32931,0.28833,0.3495,0.33713,0.29118,0.29604,0.32156,0.30035,0.37525,0.37622,0.31631,0.36469,0.31552,0.27603,0.31719,0.26815,0.35551,0.31094,0.33354,0.35581,0.31711,0.29729,0.33409,0.35123,0.34172,0.31238,0.30784,0.34064,0.32735,0.31365,0.3237,0.36088,0.30986,0.37218,0.35298],"cum_revenue_a":[5017.64,9878.55,14136.45,18895.09,24371.36,28356.76,33276.47,37525.63,42435.5,46929.87,51747.44,56769.83,61440.34,65967.08,70111.5,75145.28,80030.0,84693.4,88412.17,92745.64,97792.65,102576.2,107489.42,111469.64,116661.31,120550.34,125568.57,130275.91,134775.61,139764.67,144434.75,148958.57,152931.07,157915.4,163051.18,167769.75,172007.09,175949.14,180610.95,185643.9,189905.27,194576.05,199048.48,203335.89,207597.71,212936.47,217812.18,221834.03,226669.72,231251.68,236170.5,240900.12,246213.71,250327.51,253733.2,258062.61,263392.39,268206.43,272053.61],"cum_revenue_b":[5368.94,11314.76,15946.77,20741.7,26311.15,31780.85,36901.87,41687.7,46483.48,51452.7,56745.13,62041.37,67056.47,71567.92,76459.77,81426.05,86383.63,91485.16,97045.67,102309.87,108847.97,113451.95,118450.1,122780.08,127846.55,132266.89,137588.02,142728.87,147207.51,151743.46,156703.45,161345.12,167058.28,172862.67,177693.65,183306.62,188173.15,192404.96,197257.28,201360.25,206856.78,211611.66,216655.18,222157.37,227098.24,231642.91,236725.36,242130.08,247355.29,252135.01,256866.56,262059.62,267101.09,271923.2,276889.13,282474.54,287224.72,292900.91,298332.99],"cum_gap":[351.3,1436.21,1810.32,1846.61,1939.79,3424.09,3625.4,4162.07,4047.98,4522.83,4997.69,5271.54,5616.13,5600.84,6348.27,6280.77,6353.63,6791.76,8633.5,9564.23,11055.32,10875.75,10960.68,11310.44,11185.24,11716.55,12019.45,12452.96,12431.9,11978.79,12268.7,12386.55,14127.21,14947.27,14642.47,15536.87,16166.06,16455.82,16646.33,15716.35,16951.51,17035.61,17606.7,18821.48,19500.53,18706.44,18913.18,20296.05,20685.57,20883.33,20696.06,21159.5,20887.38,21595.69,23155.93,24411.93,23832.33,24694.48,26279.38],"dau_a":[15060,15208,15227,15098,15392,15181,15524,15282,15317,15401,15551,15329,15222,15378,15509,15311,15283,15560,15403,15404,15513,15287,15449,15310,15396,15301,15254,15327,15437,15521,15342,15215,15259,15176,15253,15359,15408,15342,15445,15284,15299,15373,15500,15474,15500,15346,15221,15331,15353,15370,15290,15431,15297,15399,15428,15359,15168,15377,15367],"dau_b":[15307,15038,15219,15083,15327,15343,15351,15216,15413,15191,15479,15232,15470,15388,15273,15325,15216,15193,15363,15230,15319,15362,15323,15280,15385,15331,15225,15249,15381,15322,15425,15454,15225,15428,15273,15391,15424,15331,15298,15301,15461,15292,15121,15464,15581,15287,15213,15388,15291,15301,15370,15245,15401,15374,15341,15477,15330,15251,15389]},"retention":[{"a":41.25498526965549,"b":39.837933856256114,"lift_pct":-3.4348610334898604,"abs_diff_pp":-1.4170514133993783,"p":5.032345204382425e-06,"z":-4.563434762163701,"test":"Two-proportion z-test","n_a":49897,"n_b":50103,"day":1},{"a":36.54528328356414,"b":34.52088697283596,"lift_pct":-5.5394188492681184,"abs_diff_pp":-2.0243963107281826,"p":2.2649896394067725e-11,"z":-6.687833275607082,"test":"Two-proportion z-test","n_a":49897,"n_b":50103,"day":3},{"a":32.144217087199635,"b":30.77460431511087,"lift_pct":-4.260837239785086,"abs_diff_pp":-1.369612772088763,"p":3.1069838067089683e-06,"z":-4.663617676853331,"test":"Two-proportion z-test","n_a":49897,"n_b":50103,"day":7},{"a":29.739262881535964,"b":29.65690677204958,"lift_pct":-0.27692720500318335,"abs_diff_pp":-0.08235610948638672,"p":0.7756579154412513,"z":-0.2849820219975089,"test":"Two-proportion z-test","n_a":49897,"n_b":50103,"day":14},{"a":29.62502755676694,"b":29.624972556533542,"lift_pct":-0.00018565462359689628,"abs_diff_pp":-5.500023340099247e-05,"p":0.9998480378985258,"z":-0.0001904562512651021,"test":"Two-proportion z-test","n_a":49897,"n_b":50103,"day":28}]};
+
+/* ------------------------------------------------------------ formatting */
+const usd = (v, d = 2) => "$" + v.toFixed(d);
+const pct = (v, d = 2) => v.toFixed(d) + "%";
+const signed = (v, d = 2, suf = "%") => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d) + suf;
+const pTxt = p => p < 0.001 ? "p < 0.001" : "p = " + p.toFixed(p < 0.01 ? 4 : 2);
+const sig = p => p < 0.05;
+const int = v => v.toLocaleString("en-US");
+
+/* ------------------------------------------------------------ svg helpers */
+const NS = "http://www.w3.org/2000/svg";
+const el = (name, attrs = {}, parent = null) => {
+  const n = document.createElementNS(NS, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const path = pts => pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(2) + " " + p[1].toFixed(2)).join(" ");
+const niceTicks = (lo, hi, count = 4) => {
+  const span = hi - lo || 1;
+  const raw = span / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw) || mag * 10;
+  const out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + step * 1e-6; v += step) out.push(+v.toFixed(10));
+  return out;
+};
+
+/* A chart is an <svg> plus an absolutely positioned HTML tooltip in a holder.
+   The svg scales with the container; hit testing converts client px back to
+   the viewBox coordinate system so the hover layer stays accurate at any width. */
+function frame(mount, { h = 300, pad = [16, 20, 34, 52] } = {}) {
+  const holder = document.createElement("div");
+  holder.className = "chart-holder";
+  // One viewBox unit equals one CSS pixel: the chart is rebuilt at the measured
+  // width rather than scaled, so axis text keeps its real size on a phone.
+  const w = Math.max(260, Math.round(mount.clientWidth || 600));
+  const svg = el("svg", { class: "plot", viewBox: `0 0 ${w} ${h}`, width: "100%", height: h, role: "img" });
+  // role="img" hides the plot's internals from assistive tech, so the figure needs
+  // a name of its own. The card heading already says what it shows; the table twin
+  // underneath carries the numbers.
+  const head = mount.parentElement && mount.parentElement.querySelector("header");
+  if (head) {
+    const h3 = head.querySelector("h3"), sub = head.querySelector(".sub");
+    svg.setAttribute("aria-label", [h3 && h3.textContent, sub && sub.textContent]
+      .filter(Boolean).join(". ") + ". Every value is listed in the table below the chart.");
+  }
+  holder.appendChild(svg);
+  const tip = document.createElement("div");
+  tip.className = "tip";
+  holder.appendChild(tip);
+  mount.appendChild(holder);
+  const tight = w < 420;
+  const [pt, pr, pb, pl] = tight ? [pad[0], Math.min(pad[1], 14), pad[2], Math.min(pad[3], 44)] : pad;
+  return {
+    svg, tip, holder, w, h,
+    x0: pl, x1: w - pr, y0: pt, y1: h - pb,
+    iw: w - pl - pr, ih: h - pt - pb,
+    toLocal(ev) {
+      const r = svg.getBoundingClientRect();
+      return [(ev.clientX - r.left) / r.width * w, (ev.clientY - r.top) / r.height * h];
+    },
+    place(ev, html) {
+      const r = holder.getBoundingClientRect();
+      tip.innerHTML = html;
+      tip.classList.add("on");
+      const tw = tip.offsetWidth;
+      let x = ev.clientX - r.left;
+      x = Math.max(tw / 2 + 4, Math.min(r.width - tw / 2 - 4, x));
+      tip.style.left = x + "px";
+      tip.style.top = Math.max(tip.offsetHeight + 6, ev.clientY - r.top - 12) + "px";
+    },
+    hide() { tip.classList.remove("on"); }
+  };
+}
+
+function axes(f, { yTicks, yFmt, xTicks, xFmt, yLo, yHi }) {
+  const sy = v => f.y1 - (v - yLo) / (yHi - yLo) * f.ih;
+  for (const t of yTicks) {
+    const y = Math.round(sy(t)) + 0.5;
+    el("line", { class: "grid-line", x1: f.x0, x2: f.x1, y1: y, y2: y }, f.svg);
+    const lb = el("text", { class: "tick", x: f.x0 - 10, y: y + 4, "text-anchor": "end" }, f.svg);
+    lb.textContent = yFmt(t);
+  }
+  el("line", { class: "axis-line", x1: f.x0, x2: f.x1, y1: f.y1 + 0.5, y2: f.y1 + 0.5 }, f.svg);
+  for (const t of xTicks) {
+    const lb = el("text", { class: "tick", x: t.x, y: f.y1 + 20, "text-anchor": t.anchor || "middle" }, f.svg);
+    lb.textContent = t.label;
+  }
+  return sy;
+}
+
+function legend(mount, items) {
+  const box = document.createElement("div");
+  box.className = "legend";
+  box.innerHTML = items.map(i =>
+    `<span class="item"><span class="key${i.dot ? " dot" : ""}" style="background:${i.color}"></span>${i.label}</span>`
+  ).join("");
+  mount.appendChild(box);
+}
+
+function tableTwin(mount, caption, cols, rows) {
+  const d = document.createElement("details");
+  d.className = "table-twin";
+  d.innerHTML = `<summary><svg class="icon" aria-hidden="true"><use href="#i-caret"></use></svg>${caption}</summary><div class="tw"><table>
+    <thead><tr>${cols.map(c => `<th scope="col">${c}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${r.map((c, i) =>
+      i ? `<td>${c}</td>` : `<th scope="row">${c}</th>`).join("")}</tr>`).join("")}</tbody>
+  </table></div>`;
+  mount.appendChild(d);
+}
+
+const CSS = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+
+/* ------------------------------------------------------------ line chart */
+function lineChart(mount, cfg) {
+  legend(mount, cfg.series.map(s => ({ color: s.color, label: s.label })));
+  const f = frame(mount, cfg.frame);
+  const n = cfg.x.length;
+  const all = cfg.series.flatMap(s => s.values);
+  const lo = Math.min(...all), hi = Math.max(...all);
+  const padY = (hi - lo) * 0.12 || 1;
+  const yLo = cfg.yLo !== undefined ? cfg.yLo : (cfg.yZero ? Math.min(0, lo) : lo - padY);
+  const yHi = cfg.yHi !== undefined ? cfg.yHi : hi + padY;
+  const sx = i => f.x0 + (n === 1 ? f.iw / 2 : i / (n - 1) * f.iw);
+  const sy = axes(f, {
+    yLo, yHi,
+    yTicks: niceTicks(yLo, yHi, 4),
+    yFmt: cfg.yFmt,
+    xTicks: cfg.xTicks(sx)
+  });
+
+  for (const s of cfg.series) {
+    const pts = s.values.map((v, i) => [sx(i), sy(v)]);
+    if (cfg.area) {
+      const d = path(pts) + ` L ${f.x1} ${sy(Math.max(yLo, 0))} L ${f.x0} ${sy(Math.max(yLo, 0))} Z`;
+      el("path", { d, fill: s.color, "fill-opacity": .1, class: "fade" }, f.svg);
+    }
+    const p = el("path", { class: "series-line draw", d: path(pts), stroke: s.color }, f.svg);
+    try { p.style.setProperty("--len", p.getTotalLength()); } catch (e) { p.classList.remove("draw"); }
+    if (cfg.markers) pts.forEach(([x, y]) =>
+      el("circle", { class: "marker fade", cx: x, cy: y, r: 4.5, fill: s.color }, f.svg));
+    if (s.endLabel) {
+      const [ex, ey] = pts[pts.length - 1];
+      const t = el("text", {
+        class: "dlabel fade", x: ex - 6, y: ey + (s.labelUp ? -10 : 16), "text-anchor": "end"
+      }, f.svg);
+      t.textContent = s.endLabel;
+    }
+    if (s.startLabel) {
+      const [bx, by] = pts[0];
+      const t = el("text", {
+        class: "dlabel fade", x: bx + 8, y: by + (s.labelDy !== undefined ? s.labelDy : (s.labelUp ? -9 : 17)), "text-anchor": "start"
+      }, f.svg);
+      t.textContent = s.startLabel;
+    }
+  }
+
+  /* A measured gap between the two series at one index. Used where the story is
+     the distance itself and end labels would land on top of each other. */
+  for (const an of cfg.annotations || []) {
+    const x = sx(an.index);
+    const ya = sy(cfg.series[0].values[an.index]);
+    const yb = sy(cfg.series[1].values[an.index]);
+    const ink = CSS("--ink-2");
+    el("line", { class: "fade", x1: x, x2: x, y1: ya, y2: yb, stroke: ink, "stroke-width": 1 }, f.svg);
+    for (const y of [ya, yb]) {
+      el("line", { class: "fade", x1: x - 3.5, x2: x + 3.5, y1: y, y2: y, stroke: ink, "stroke-width": 1 }, f.svg);
+    }
+    const t = el("text", {
+      class: "dlabel fade", x: x + 9, y: (ya + yb) / 2 + 4, "text-anchor": "start"
+    }, f.svg);
+    t.textContent = an.label;
+  }
+
+  // hover layer: nearest x index, crosshair plus one dot per series
+  const hair = el("line", { class: "crosshair", y1: f.y0, y2: f.y1, opacity: 0 }, f.svg);
+  const dots = cfg.series.map(s =>
+    el("circle", { class: "marker", r: 5, fill: s.color, opacity: 0 }, f.svg));
+  const hit = el("rect", {
+    x: f.x0, y: f.y0, width: f.iw, height: f.ih, fill: "transparent", style: "cursor:crosshair"
+  }, f.svg);
+  const show = ev => {
+    const [mx] = f.toLocal(ev);
+    const i = Math.max(0, Math.min(n - 1, Math.round((mx - f.x0) / f.iw * (n - 1))));
+    const x = sx(i);
+    hair.setAttribute("x1", x); hair.setAttribute("x2", x); hair.setAttribute("opacity", 1);
+    cfg.series.forEach((s, k) => {
+      dots[k].setAttribute("cx", x); dots[k].setAttribute("cy", sy(s.values[i]));
+      dots[k].setAttribute("opacity", 1);
+    });
+    f.place(ev, `<div class="th">${cfg.xLabel(i)}</div>` + cfg.series.map(s =>
+      `<div class="row"><span class="k" style="background:${s.color}"></span>${s.label}
+       <span class="n">${cfg.yFmtFull(s.values[i])}</span></div>`).join(""));
+  };
+  const hideAll = () => {
+    hair.setAttribute("opacity", 0);
+    dots.forEach(d => d.setAttribute("opacity", 0));
+    f.hide();
+  };
+  hit.addEventListener("pointermove", show);
+  hit.addEventListener("pointerleave", hideAll);
+  return f;
+}
+
+/* ------------------------------------------------------------ histogram */
+function histogram(mount, cfg) {
+  const f = frame(mount, cfg.frame);
+  const { counts, edges } = cfg.hist;
+  const yHi = Math.max(...counts) * 1.14;
+  const xLo = edges[0], xHi = edges[edges.length - 1];
+  const sx = v => f.x0 + (v - xLo) / (xHi - xLo) * f.iw;
+  const sy = axes(f, {
+    yLo: 0, yHi, yTicks: niceTicks(0, yHi, 4), yFmt: v => int(Math.round(v)),
+    xTicks: niceTicks(xLo, xHi, 5).map(v => ({ x: sx(v), label: usd(v, 2) }))
+  });
+
+  // confidence band behind the bars, then the two bounds and the point estimate
+  el("rect", {
+    x: sx(cfg.ciLow), y: f.y0, width: sx(cfg.ciHigh) - sx(cfg.ciLow), height: f.ih,
+    fill: cfg.color, "fill-opacity": .09, class: "fade"
+  }, f.svg);
+  for (const b of [cfg.ciLow, cfg.ciHigh]) {
+    el("line", {
+      class: "fade", x1: sx(b), x2: sx(b), y1: f.y0, y2: f.y1,
+      stroke: cfg.color, "stroke-width": 1.5, "stroke-opacity": .55
+    }, f.svg);
+  }
+
+  const gap = 2;
+  counts.forEach((c, i) => {
+    if (!c) return;
+    const x = sx(edges[i]), xe = sx(edges[i + 1]);
+    const wRaw = xe - x - gap;
+    const bw = Math.max(1, Math.min(24, wRaw));
+    const y = sy(c), hgt = f.y1 - y;
+    const r = Math.min(4, bw / 2, hgt);
+    // rounded data-end, square at the baseline
+    const d = `M${x + (wRaw - bw) / 2} ${f.y1} V${y + r} a${r} ${r} 0 0 1 ${r} ${-r}
+               h${bw - 2 * r} a${r} ${r} 0 0 1 ${r} ${r} V${f.y1} Z`;
+    el("path", { class: "bar fade", d, fill: cfg.color, "fill-opacity": .85 }, f.svg);
+  });
+
+  const zx = Math.round(sx(0)) + 0.5;
+  if (zx > f.x0 && zx < f.x1) {
+    el("line", { x1: zx, x2: zx, y1: f.y0, y2: f.y1, stroke: CSS("--axis"), "stroke-width": 1 }, f.svg);
+  }
+  const lab = el("text", {
+    class: "dlabel fade", x: sx(cfg.point), y: f.y0 + 4, "text-anchor": "middle"
+  }, f.svg);
+  lab.textContent = usd(cfg.point, 2);
+  const lab2 = el("text", {
+    class: "dlabel soft fade", x: sx(cfg.ciLow), y: f.y0 + 4, "text-anchor": "middle"
+  }, f.svg);
+  lab2.textContent = "95% CI";
+  return f;
+}
+
+/* ------------------------------------------------------------ dumbbell */
+function dumbbell(mount, cfg) {
+  legend(mount, cfg.series.map(s => ({ color: s.color, label: s.label, dot: true })));
+  const rows = cfg.rows;
+  const h = 54 * rows.length + 46;
+  const f = frame(mount, { w: 520, h, pad: [14, 58, 32, 52] });
+  const vals = rows.flatMap(r => [r.a, r.b]);
+  const lo = 0, hi = Math.max(...vals) * 1.08;
+  const sx = v => f.x0 + (v - lo) / (hi - lo) * f.iw;
+  const rowY = i => f.y0 + 26 + i * 54;
+
+  for (const t of niceTicks(lo, hi, 4)) {
+    const x = Math.round(sx(t)) + 0.5;
+    el("line", { class: "grid-line", x1: x, x2: x, y1: f.y0, y2: f.y1 }, f.svg);
+    const lb = el("text", { class: "tick", x, y: f.y1 + 20, "text-anchor": "middle" }, f.svg);
+    lb.textContent = usd(t, 0);
+  }
+  el("line", { class: "axis-line", x1: f.x0 + 0.5, x2: f.x0 + 0.5, y1: f.y0, y2: f.y1 }, f.svg);
+
+  rows.forEach((r, i) => {
+    const y = rowY(i);
+    const lb = el("text", { class: "tick", x: f.x0 - 10, y: y + 4, "text-anchor": "end" }, f.svg);
+    lb.textContent = r.label;
+    el("line", {
+      x1: sx(r.a), x2: sx(r.b), y1: y, y2: y,
+      stroke: CSS("--axis"), "stroke-width": 2, "stroke-linecap": "round", class: "fade"
+    }, f.svg);
+    el("circle", { class: "marker fade", cx: sx(r.a), cy: y, r: 5, fill: cfg.series[0].color }, f.svg);
+    el("circle", { class: "marker fade", cx: sx(r.b), cy: y, r: 5, fill: cfg.series[1].color }, f.svg);
+    const dl = el("text", {
+      class: "dlabel fade", x: Math.max(sx(r.a), sx(r.b)) + 12, y: y + 4, "text-anchor": "start"
+    }, f.svg);
+    dl.textContent = signed(r.lift, 1);
+
+    const hit = el("rect", {
+      x: f.x0, y: y - 24, width: f.iw, height: 48, fill: "transparent", style: "cursor:default"
+    }, f.svg);
+    const html = `<div class="th">${r.label} of payer spend</div>
+      <div class="row"><span class="k" style="background:${cfg.series[0].color}"></span>Control
+        <span class="n">${usd(r.a)}</span></div>
+      <div class="row"><span class="k" style="background:${cfg.series[1].color}"></span>Treatment
+        <span class="n">${usd(r.b)}</span></div>`;
+    hit.addEventListener("pointermove", ev => f.place(ev, html));
+    hit.addEventListener("pointerleave", () => f.hide());
+  });
+  return f;
+}
+
+/* ------------------------------------------------------------ build page */
+const M = DATA.meta, R = DATA.revenue, E = DATA.engagement, RET = DATA.retention, B = DATA.bootstrap;
+const d1 = RET.find(r => r.day === 1), d7 = RET.find(r => r.day === 7), d14 = RET.find(r => r.day === 14);
+
+document.getElementById("hero-lede").textContent =
+  `A ${M.days} day experiment on ${int(M.users)} players. Revenue per user rose ${signed(R.arpu.lift_pct, 1)}. ` +
+  `Day 1 retention fell ${Math.abs(d1.abs_diff_pp).toFixed(2)} points. Both hold up statistically.`;
+document.getElementById("hero-val").textContent = signed(R.arpu.lift_pct, 2);
+document.getElementById("hero-cap").textContent =
+  `revenue per user in the treatment group, ${usd(R.arpu.a)} to ${usd(R.arpu.b)}`;
+document.getElementById("hero-sub").textContent =
+  `Welch t-test, ${pTxt(R.arpu.p)}. Bootstrap 95% CI ${usd(B.ci_low)} to ${usd(B.ci_high)}.`;
+
+const kpis = [
+  { label: "Revenue per user", value: signed(R.arpu.lift_pct, 2), p: R.arpu.p, good: true,
+    meta: `${usd(R.arpu.a)} to ${usd(R.arpu.b)}` },
+  { label: "Revenue per payer", value: signed(R.arppu.lift_pct, 2), p: R.arppu.p, good: true,
+    meta: `${usd(R.arppu.a)} to ${usd(R.arppu.b)}` },
+  { label: "Day 1 retention", value: signed(d1.abs_diff_pp, 2, " pp"), p: d1.p, good: false,
+    meta: `${pct(d1.a)} to ${pct(d1.b)}` },
+  { label: "Conversion to payer", value: signed(R.conversion.lift_pct, 2), p: R.conversion.p, good: null,
+    meta: `${pct(R.conversion.a)} to ${pct(R.conversion.b)}` }
+];
+document.getElementById("kpis").innerHTML = kpis.map(k => {
+  const significant = sig(k.p);
+  const cls = !significant ? "" : k.good ? " pos" : " neg";
+  const word = !significant ? "not significant" : k.good ? "significant gain" : "significant loss";
+  return `<div class="kpi">
+    <div class="label">${k.label}</div>
+    <div class="value num">${k.value}</div>
+    <div class="meta">
+      <span class="tag${cls}"><span class="dot" aria-hidden="true"></span>${word}</span>
+      <span class="note num">${pTxt(k.p)}</span>
+    </div>
+    <p class="note" style="margin-top:.5rem">${k.meta}</p>
+  </div>`;
+}).join("");
+
+const S = DATA.srm;
+document.getElementById("facts").innerHTML = [
+  { t: "Split held at 50/50",
+    v: `${int(S.n_a)} / ${int(S.n_b)}`,
+    p: `Chi-square sample ratio test, ${pTxt(S.p)}. No sign that assignment or logging dropped users from one arm.` },
+  { t: "One group per player",
+    v: `${int(M.users)} players`,
+    p: "Every identifier appears in exactly one arm across the whole window, so no player contributes to both sides." },
+  { t: "Full window covered",
+    v: `${M.days} days`,
+    p: `${M.date_start} to ${M.date_end}, with both arms present on every single day of the run.` },
+  { t: "Analysed per player",
+    v: "user level",
+    p: "Daily rows are collapsed to one row per player first, so repeated visits from the same person are not counted as independent." }
+].map(f => `<div class="fact">
+    <div class="t">
+      <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>
+      <span>${f.t}</span><span class="v num">${f.v}</span>
+    </div>
+    <p>${f.p}</p>
+  </div>`).join("");
+
+const CA = () => CSS("--a"), CB = () => CSS("--b");
+const D = DATA.daily;
+const short = s => { const [, m, d] = s.split("-"); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m - 1]} ${+d}`; };
+const dayTicks = sx => [0, Math.floor((D.dates.length - 1) / 2), D.dates.length - 1]
+  .map((i, k) => ({ x: sx(i), label: short(D.dates[i]), anchor: k === 0 ? "start" : k === 2 ? "end" : "middle" }));
+
+const motionOK = matchMedia("(prefers-reduced-motion: no-preference)").matches;
+
+/* Charts are drawn against measured pixels and against colours read from CSS,
+   so a theme flip or a width change means rebuilding rather than patching. */
+function renderVisuals() {
+  for (const id of ["c-arpdau", "c-cumgap", "c-boot", "c-pct", "c-ret"]) {
+    document.getElementById(id).innerHTML = "";
+  }
+
+const mArpdau = document.getElementById("c-arpdau");
+lineChart(mArpdau, {
+  x: D.dates, yZero: true, frame: { w: 620, h: 300, pad: [16, 22, 34, 52] },
+  series: [
+    { label: "Control", color: CA(), values: D.arpdau_a },
+    { label: "Treatment", color: CB(), values: D.arpdau_b }
+  ],
+  yFmt: v => "$" + v.toFixed(2), yFmtFull: v => usd(v, 4),
+  xLabel: i => short(D.dates[i]), xTicks: dayTicks
+});
+tableTwin(mArpdau, "Daily values as a table", ["Date", "Control", "Treatment", "Difference"],
+  D.dates.map((d, i) => [short(d), usd(D.arpdau_a[i], 4), usd(D.arpdau_b[i], 4),
+    signed(D.arpdau_b[i] - D.arpdau_a[i], 4, "")]));
+
+const mGap = document.getElementById("c-cumgap");
+lineChart(mGap, {
+  x: D.dates, yZero: true, area: true, frame: { w: 620, h: 300, pad: [16, 22, 34, 62] },
+  series: [{
+    label: "Cumulative gap, treatment minus control", color: CB(), values: D.cum_gap,
+    endLabel: "$" + int(Math.round(D.cum_gap[D.cum_gap.length - 1])), labelUp: true
+  }],
+  yFmt: v => "$" + int(Math.round(v / 1000)) + "k", yFmtFull: v => "$" + int(Math.round(v)),
+  xLabel: i => short(D.dates[i]), xTicks: dayTicks
+});
+tableTwin(mGap, "Cumulative revenue as a table", ["Date", "Control", "Treatment", "Gap"],
+  D.dates.map((d, i) => [short(d), "$" + int(Math.round(D.cum_revenue_a[i])),
+    "$" + int(Math.round(D.cum_revenue_b[i])), "$" + int(Math.round(D.cum_gap[i]))]));
+
+document.getElementById("boot-sub").textContent =
+  `${int(B.iters)} resamples of both groups, difference in mean revenue per user`;
+document.getElementById("boot-ci").textContent = `${usd(B.ci_low)} to ${usd(B.ci_high)}`;
+document.getElementById("boot-share").textContent =
+  (B.share_above_zero >= 1 ? "100" : (B.share_above_zero * 100).toFixed(1)) + "%";
+const mBoot = document.getElementById("c-boot");
+histogram(mBoot, {
+  hist: B.hist, ciLow: B.ci_low, ciHigh: B.ci_high, point: B.point, color: CA(),
+  frame: { w: 640, h: 300, pad: [22, 24, 34, 52] }
+});
+tableTwin(mBoot, "Interval summary as a table", ["Quantity", "Value"], [
+  ["Observed difference", usd(B.point)],
+  ["Lower bound, 2.5%", usd(B.ci_low)],
+  ["Upper bound, 97.5%", usd(B.ci_high)],
+  ["Resamples above zero", (B.share_above_zero * 100).toFixed(1) + "%"],
+  ["Resamples drawn", int(B.iters)]
+]);
+
+document.getElementById("decomp").innerHTML = [
+  { name: "Revenue per paying user", m: R.arppu, fmt: usd,
+    why: "Players who already paid moved up. This is where the entire revenue gain comes from." },
+  { name: "Share of players who pay", m: R.conversion, fmt: v => pct(v),
+    why: "Unchanged. The feature did not convert a single additional player into a payer." },
+  { name: "Sessions per player", m: E.sessions, fmt: v => v.toFixed(1),
+    why: "More sessions among those who stayed, consistent with the extra spend." }
+].map(r => {
+  const significant = sig(r.m.p);
+  const positive = r.m.lift_pct > 0;
+  const cls = !significant ? "" : positive ? " pos" : " neg";
+  return `<div class="crow">
+    <span class="name">${r.name}</span>
+    <span class="delta num" style="color:${!significant ? "var(--ink-2)" : positive ? "var(--pos-text)" : "var(--neg-text)"}">${signed(r.m.lift_pct, 2)}</span>
+    <div class="ab">
+      <span><i style="background:${CA()}"></i>Control ${r.fmt(r.m.a)}</span>
+      <span><i style="background:${CB()}"></i>Treatment ${r.fmt(r.m.b)}</span>
+      <span class="tag${cls}"><span class="dot" aria-hidden="true"></span>${pTxt(r.m.p)}</span>
+    </div>
+    <p class="why">${r.why}</p>
+  </div>`;
+}).join("");
+
+const mPct = document.getElementById("c-pct");
+dumbbell(mPct, {
+  series: [{ label: "Control", color: CA() }, { label: "Treatment", color: CB() }],
+  rows: DATA.percentiles.map(p => ({ label: "p" + p.q, a: p.a, b: p.b, lift: p.lift_pct }))
+});
+tableTwin(mPct, "Percentiles as a table", ["Percentile", "Control", "Treatment", "Lift"],
+  DATA.percentiles.map(p => ["p" + p.q, usd(p.a), usd(p.b), signed(p.lift_pct, 1)]));
+
+const mRet = document.getElementById("c-ret");
+const retDays = RET.map(r => r.day);
+const worst = RET.reduce((m, r) => Math.abs(r.abs_diff_pp) > Math.abs(m.abs_diff_pp) ? r : m, RET[0]);
+lineChart(mRet, {
+  x: retDays, markers: true, frame: { h: 330, pad: [22, 30, 38, 56] },
+  yLo: 25, yHi: 45,
+  annotations: [{ index: RET.indexOf(worst), label: signed(worst.abs_diff_pp, 2, " pp") }],
+  series: [
+    { label: "Control", color: CA(), values: RET.map(r => r.a), startLabel: pct(RET[0].a, 1), labelUp: true },
+    // Both curves fall steeply out of Day 1, so a label set just under the point
+    // gets crossed by its own line. Drop it clear of the descent instead.
+    { label: "Treatment", color: CB(), values: RET.map(r => r.b), startLabel: pct(RET[0].b, 1), labelDy: 37 }
+  ],
+  yFmt: v => v.toFixed(0) + "%", yFmtFull: v => pct(v),
+  xLabel: i => "Day " + retDays[i],
+  xTicks: sx => retDays.map((d, i) => ({ x: sx(i), label: "Day " + d }))
+});
+tableTwin(mRet, "Retention as a table", ["Day", "Control", "Treatment", "Difference", "Test"],
+  RET.map(r => ["Day " + r.day, pct(r.a), pct(r.b), signed(r.abs_diff_pp, 2, " pp"),
+    sig(r.p) ? pTxt(r.p) + ", significant" : pTxt(r.p) + ", not significant"]));
+
+  // anything whose section the reader has already passed comes back visible at once
+  document.querySelectorAll(".block").forEach(b => {
+    if (!motionOK || b.classList.contains("in")) {
+      b.querySelectorAll(".draw, .fade").forEach(n => n.classList.add("in"));
+    }
+  });
+}
+
+renderVisuals();
+
+let resizeTimer, lastWidth = innerWidth;
+addEventListener("resize", () => {
+  if (Math.abs(innerWidth - lastWidth) < 24) return;
+  lastWidth = innerWidth;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(renderVisuals, 180);
+});
+
+const lostD7 = Math.round((d7.a - d7.b) / 100 * d7.n_b);
+document.getElementById("tradeoff").innerHTML = `
+  <div><dt>What shipping buys</dt><dd>${usd(B.point)} more per player, ${signed(R.arpu.lift_pct, 1)}</dd></div>
+  <div><dt>What it costs</dt><dd>${Math.abs(d1.abs_diff_pp).toFixed(2)} points of day 1 retention</dd></div>
+  <div><dt>Players gone by day 7</dt><dd>about ${int(lostD7)} of ${int(d7.n_b)}</dd></div>
+  <div><dt>Gap at day 14</dt><dd>${signed(d14.abs_diff_pp, 2, " pp")}, ${pTxt(d14.p)}</dd></div>`;
+document.getElementById("tradeoff-note").textContent =
+  "The day 7 figure is the retention difference applied to the treatment cohort. It counts players " +
+  "who would have stayed under the control experience and did not.";
+
+document.getElementById("m-iters").textContent = int(M.bootstrap_iters);
+document.getElementById("m-scope").textContent = `${int(M.users)} players, user level aggregates`;
+document.getElementById("m-window").textContent = `${M.date_start} to ${M.date_end}, ${M.days} days`;
+
+/* ------------------------------------------------------------ theme */
+const root = document.documentElement;
+const label = document.getElementById("theme-label");
+const stored = (() => { try { return localStorage.getItem("abtest-theme"); } catch (e) { return null; } })();
+if (stored === "light" || stored === "dark") root.dataset.theme = stored;
+const isDark = () => root.dataset.theme
+  ? root.dataset.theme === "dark"
+  : matchMedia("(prefers-color-scheme: dark)").matches;
+// The visible word names the theme you get by pressing, which reads as a state
+// rather than an action once it is the button's whole accessible name.
+const syncLabel = () => {
+  const next = isDark() ? "light" : "dark";
+  label.textContent = next[0].toUpperCase() + next.slice(1);
+  label.parentElement.setAttribute("aria-label", "Switch to " + next + " theme");
+};
+syncLabel();
+document.getElementById("theme").addEventListener("click", () => {
+  root.dataset.theme = isDark() ? "light" : "dark";
+  try { localStorage.setItem("abtest-theme", root.dataset.theme); } catch (e) {}
+  syncLabel();
+  renderVisuals();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (!root.dataset.theme) { syncLabel(); renderVisuals(); }
+});
+
+/* ------------------------------------------------------------ reveal */
+if (motionOK) {
+  const io = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      e.target.classList.add("in");
+      e.target.querySelectorAll(".draw, .fade").forEach(n => n.classList.add("in"));
+      io.unobserve(e.target);
+    }
+  }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll(".reveal").forEach(n => io.observe(n));
+  // charts above the fold or inside an already visible block still need their cue
+  setTimeout(() => document.querySelectorAll(".block:not(.in) .draw, .block:not(.in) .fade")
+    .forEach(n => { if (n.getBoundingClientRect().top < innerHeight) n.classList.add("in"); }), 60);
+} else {
+  document.querySelectorAll(".reveal").forEach(n => n.classList.add("in"));
+  document.querySelectorAll(".draw, .fade").forEach(n => n.classList.add("in"));
+}
+</script>
+
+</body>
+</html>
