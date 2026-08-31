@@ -12,6 +12,8 @@ The driver is ARPPU (+10.85%), not conversion. Existing payers spend more in B, 
 
 **Recommendation: do not ship B as is.** Investigate what in the feature drives the D1-D7 churn, build B2 with the early friction removed, run a fresh test. If shipping anyway is mandatory, monitor early retention closely and be ready to roll back.
 
+**[Interactive dashboard](https://proggdd.github.io/ab-test-mobile-game/)** — explore the full dataset with 5 charts (daily trends, distributions, retention curves, bootstrap confidence intervals) and accompanying data tables.
+
 ## Metrics
 
 | Metric | A | B | Lift | p-value | Significant? |
