@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ship or Hold - A/B test readout</title>
-<meta name="description" content="A/B test readout for a mobile game feature: revenue up 9.2%, early retention down, and the case for holding the release.">
+<meta name="description" content="A/B test readout for a mobile game feature: revenue up 9.2%, an early-retention drop that turned out not to be churn, and a ship decision I had to reverse.">
 <meta name="author" content="Daniil Glotov">
 <meta property="og:title" content="Ship or Hold - A/B test readout">
-<meta property="og:description" content="A/B test readout for a mobile game feature: revenue up 9.2%, early retention down, and the case for holding the release.">
+<meta property="og:description" content="A/B test readout for a mobile game feature: revenue up 9.2%, an early-retention drop that turned out not to be churn, and a ship decision I had to reverse.">
 <meta property="og:type" content="article">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -175,6 +175,11 @@ a:focus-visible, button:focus-visible, summary:focus-visible {
   font-size: .8125rem; font-weight: 500; color: var(--ink);
 }
 .verdict-pill .mark { width: 1.05em; height: 1.05em; color: var(--critical); }
+.verdict-pill.ok {
+  border-color: color-mix(in srgb, var(--good) 40%, transparent);
+  background: color-mix(in srgb, var(--good) 10%, var(--surface));
+}
+.verdict-pill.ok .mark { color: var(--good); }
 .hero h1 .em { color: var(--critical); }
 .hero .lede { margin-top: 1.25rem; }
 .hero-figure {
@@ -392,8 +397,8 @@ footer.foot { padding: 3rem 0 4rem; color: var(--ink-2); font-size: .875rem; }
   <div class="hero">
     <div class="wrap hero-grid">
       <div>
-        <span class="verdict-pill"><svg class="icon mark" aria-hidden="true"><use href="#i-alert"></use></svg>Recommendation: hold</span>
-        <h1>The feature makes money. <br><span class="em">Do not ship it yet.</span></h1>
+        <span class="verdict-pill ok"><svg class="icon mark" aria-hidden="true"><use href="#i-check"></use></svg>Recommendation: ship</span>
+        <h1>The feature makes money. <br><span class="em">The churn it looked to cost is not there.</span></h1>
         <p class="lede" id="hero-lede"></p>
       </div>
       <div class="hero-figure">
@@ -504,9 +509,9 @@ footer.foot { padding: 3rem 0 4rem; color: var(--ink-2); font-size: .875rem; }
   <section class="block reveal">
     <div class="wrap">
       <div class="head">
-        <h2>And here is what it cost</h2>
-        <p class="lede">Early retention drops for a full week before the curves meet again. Players who
-          would have stayed left in the first days, and the revenue gain is measured on the ones who remained.</p>
+        <h2>What looked like the cost</h2>
+        <p class="lede">Early retention drops for a full week before the curves meet again. My first readout
+          called that churn and held the release. It is not churn — the next section shows why.</p>
       </div>
       <div class="card">
         <header>
@@ -518,6 +523,60 @@ footer.foot { padding: 3rem 0 4rem; color: var(--ink-2); font-size: .875rem; }
     </div>
   </section>
 
+  <!-- ------------------------------------------- 5b. why it is not churn -->
+  <section class="block reveal">
+    <div class="wrap">
+      <div class="head">
+        <h2>How I know it is not churn</h2>
+        <p class="lede">Whether players left needs no cohort anchor at all. The count of active days per
+          player sits in the published user level file, and it answers the question directly.</p>
+      </div>
+      <div class="chart-side">
+        <div class="card">
+          <header>
+            <h3>Share of players by activity</h3>
+            <p class="note sub">Cumulative, out of 59 days</p>
+          </header>
+          <table>
+            <thead><tr><th scope="col">Active days</th><th scope="col">A</th><th scope="col">B</th><th scope="col">Diff</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">3 or fewer</th><td>4.660%</td><td>8.952%</td><td>+4.29 pp</td></tr>
+              <tr><th scope="row">5 or fewer</th><td>12.291%</td><td>14.516%</td><td>+2.23 pp</td></tr>
+              <tr><th scope="row">7 or fewer</th><td>15.087%</td><td>15.051%</td><td>-0.04 pp</td></tr>
+              <tr><th scope="row">14 or fewer</th><td>18.941%</td><td>18.672%</td><td>-0.27 pp</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <header>
+            <h3>Where the difference sits</h3>
+            <p class="note sub">Band by band, difference in percentage points</p>
+          </header>
+          <table>
+            <thead><tr><th scope="col">Active days</th><th scope="col">A</th><th scope="col">B</th><th scope="col">B - A</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">1</th><td>0.435%</td><td>0.950%</td><td>+0.52</td></tr>
+              <tr><th scope="row">2</th><td>1.259%</td><td>3.183%</td><td>+1.93</td></tr>
+              <tr><th scope="row">3</th><td>2.966%</td><td>4.818%</td><td>+1.85</td></tr>
+              <tr><th scope="row">4</th><td>4.058%</td><td>3.892%</td><td>-0.17</td></tr>
+              <tr><th scope="row">5</th><td>3.573%</td><td>1.673%</td><td>-1.90</td></tr>
+              <tr><th scope="row">6</th><td>1.968%</td><td>0.449%</td><td>-1.52</td></tr>
+              <tr><th scope="row">7</th><td>0.828%</td><td>0.086%</td><td>-0.74</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:1.6rem">The cumulative shares converge by day seven. The disengaging
+        segment holds 7,528 players in A and 7,541 in B — the same group, to within four hundredths of a point.
+        Inside it, mean active days are 4.21 against 3.26. B removes nobody. It makes the same players stop
+        about a day sooner, and those players have three to four active days out of fifty-nine.</p>
+      <p class="note" style="margin-top:.9rem">Day 14 differs by 0.08 points, day 28 by 0.00, no player in
+        either arm has zero active days, and daily actives trend upward in both arms across the whole window.
+        Reproduce it with <span style="font-family:var(--mono)">python analysis/reaudit_active_days.py</span>
+        in the repository — standard library only, runs on the committed data.</p>
+    </div>
+  </section>
+
   <!-- ----------------------------------------------------- 6. decision -->
   <section class="block reveal">
     <div class="wrap">
@@ -526,30 +585,31 @@ footer.foot { padding: 3rem 0 4rem; color: var(--ink-2); font-size: .875rem; }
       </div>
       <div class="decision">
         <div>
-          <p class="lede">Shipping B trades a durable asset for a measurable one. The revenue gain is real
-            and repeatable. The churn is also real, and it is spent up front on players who never come back
-            to be counted. A feature that earns more from a shrinking base is not the same feature as one
-            that earns more.</p>
-          <p class="lede" style="margin-top:1rem">The gap closes by day 14, which is the argument for shipping.
-            It closes because the players who would have widened it are already gone, which is the argument against.</p>
+          <p class="lede">My first readout held the release. Revenue was up, early retention was down, and
+            trading a durable asset for a measurable one looked like a bad deal. The re-audit removed the
+            durable asset from the equation: the same share of players disengages either way, and B only
+            changes when the lowest-value segment stops.</p>
+          <p class="lede" style="margin-top:1rem">What remains is a nine percent revenue gain with identical
+            long-run retention. Across the window the treatment arm earned about twenty-six thousand dollars
+            more. There is no measured cost to set against it.</p>
           <div class="steps">
             <div class="step">
               <span class="n">1</span>
-              <div><b>Find the friction</b>
-                <p>The loss is concentrated in days 1 to 7. Session logs from the first three days of the
-                  treatment arm will show which step players leave from.</p></div>
+              <div><b>Ship it in stages</b>
+                <p>Use day 14 and day 28 retention as the stopping rules, not day 1. Day 1 moves here for
+                  reasons that do not predict survival.</p></div>
             </div>
             <div class="step">
               <span class="n">2</span>
-              <div><b>Build B2 without that step</b>
-                <p>Keep the monetisation change, remove or soften whatever drives the early exit,
-                  then test again on a fresh cohort.</p></div>
+              <div><b>Re-anchor the retention curve</b>
+                <p>Rebuild the cohort metric on install date rather than first active day in the window, and
+                  censor mid-window installs. The conclusion holds without it, but the curve should be right.</p></div>
             </div>
             <div class="step">
               <span class="n">3</span>
-              <div><b>If launch is mandatory, launch instrumented</b>
-                <p>Staged rollout with day 1 retention as the stopping rule, and a rollback path
-                  agreed before the first cohort is exposed.</p></div>
+              <div><b>Keep an eye on the early segment</b>
+                <p>Check whether players who now stop at day three instead of day five carry residual value.
+                  On this dataset they do not, but that is a property of the data, not a law.</p></div>
             </div>
           </div>
         </div>
@@ -911,7 +971,8 @@ const d1 = RET.find(r => r.day === 1), d7 = RET.find(r => r.day === 7), d14 = RE
 
 document.getElementById("hero-lede").textContent =
   `A ${M.days} day experiment on ${int(M.users)} players. Revenue per user rose ${signed(R.arpu.lift_pct, 1)}. ` +
-  `Day 1 retention fell ${Math.abs(d1.abs_diff_pp).toFixed(2)} points. Both hold up statistically.`;
+  `Day 1 retention fell ${Math.abs(d1.abs_diff_pp).toFixed(2)} points — and a re-audit of my own analysis ` +
+  `showed that drop is not players leaving.`;
 document.getElementById("hero-val").textContent = signed(R.arpu.lift_pct, 2);
 document.getElementById("hero-cap").textContent =
   `revenue per user in the treatment group, ${usd(R.arpu.a)} to ${usd(R.arpu.b)}`;
@@ -1096,15 +1157,15 @@ addEventListener("resize", () => {
   resizeTimer = setTimeout(renderVisuals, 180);
 });
 
-const lostD7 = Math.round((d7.a - d7.b) / 100 * d7.n_b);
+const cumGap = DATA.daily.cum_gap[DATA.daily.cum_gap.length - 1];
 document.getElementById("tradeoff").innerHTML = `
   <div><dt>What shipping buys</dt><dd>${usd(B.point)} more per player, ${signed(R.arpu.lift_pct, 1)}</dd></div>
-  <div><dt>What it costs</dt><dd>${Math.abs(d1.abs_diff_pp).toFixed(2)} points of day 1 retention</dd></div>
-  <div><dt>Players gone by day 7</dt><dd>about ${int(lostD7)} of ${int(d7.n_b)}</dd></div>
+  <div><dt>Revenue across the window</dt><dd>$${int(Math.round(cumGap))} in favour of B</dd></div>
+  <div><dt>Players lost</dt><dd>none — disengaging share 15.09% against 15.05%</dd></div>
   <div><dt>Gap at day 14</dt><dd>${signed(d14.abs_diff_pp, 2, " pp")}, ${pTxt(d14.p)}</dd></div>`;
 document.getElementById("tradeoff-note").textContent =
-  "The day 7 figure is the retention difference applied to the treatment cohort. It counts players " +
-  "who would have stayed under the control experience and did not.";
+  "Day 1 retention still differs, and the difference is real. It measures how activity is spaced, not who " +
+  "survives: the share of players who disengage inside the window is the same in both arms.";
 
 document.getElementById("m-iters").textContent = int(M.bootstrap_iters);
 document.getElementById("m-scope").textContent = `${int(M.users)} players, user level aggregates`;
