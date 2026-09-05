@@ -4,7 +4,7 @@ Analysis of an A/B experiment in a mobile game. Test assignment for a game studi
 
 ## TL;DR
 
-Group B shows **+9.21% ARPU lift** versus control A. Statistically significant (Welch t-test p < 0.001, bootstrap CI [+0.30, +0.71], 5000 iterations), stable across days and across the payer distribution.
+Group B shows **+9.21% ARPU lift** versus control A. Statistically significant (Welch t-test p < 0.001; bootstrap CI $0.30 to $0.71 per user, i.e. +5.4% to +13.0% relative, 5000 iterations), stable across days and across the payer distribution.
 
 The driver is ARPPU (+10.85%), not conversion. Existing payers spend more in B, but the test did not bring new payers in.
 
