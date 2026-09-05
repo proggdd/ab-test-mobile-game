@@ -8,9 +8,11 @@ Group B shows **+9.21% ARPU lift** versus control A. Statistically significant (
 
 The driver is ARPPU (+10.85%), not conversion. Existing payers spend more in B, but the test did not bring new payers in.
 
-**Retention in B is significantly lower on early days:** D1 -3.4%, D3 -5.5%, D7 -4.3% (all p < 0.001). By D14 the gap disappears. The feature monetizes users who stay, but pushes some users out earlier.
+Early-day retention in B reads lower — D1 -1.42 pp, D3 -2.02 pp, D7 -1.37 pp (all p < 0.001) — and my first readout took that as the feature pushing users out. **A later re-audit of my own analysis showed that reading was wrong.** The share of users who disengage is identical in both arms: 15.09% in A against 15.05% in B have 7 or fewer active days out of 59. B removes nobody. It makes the same-sized disengaging segment stop roughly one day sooner.
 
-**Recommendation: do not ship B as is.** Investigate what in the feature drives the D1-D7 churn, build B2 with the early friction removed, run a fresh test. If shipping anyway is mandatory, monitor early retention closely and be ready to roll back.
+**Recommendation: ship B.** Revenue is up ~9% with no incremental churn, identical D14 and D28 retention, and rising DAU in both arms. Watch the early-disengagement cohort, but note what it is: users with 3-4 active days out of 59, the lowest-value segment in the dataset.
+
+Full evidence and the reproduction script: [Re-audit](#re-audit-what-the-first-readout-got-wrong).
 
 **[Interactive dashboard](https://proggdd.github.io/ab-test-mobile-game/)** — explore the full dataset with 5 charts (daily trends, distributions, retention curves, bootstrap confidence intervals) and accompanying data tables.
 
@@ -23,12 +25,48 @@ The driver is ARPPU (+10.85%), not conversion. Existing payers spend more in B, 
 | Conversion to payer, % | 16.59 | 16.35 | -1.48% | 0.29 | No |
 | Sessions per user | 34.1 | 36.4 | +6.75% | <0.001 | Yes |
 | Time, min | 1089 | 1191 | +9.36% | <0.001 | Yes |
-| Active days | 18.15 | 18.04 | -0.57% | 0.02 | Borderline |
+| Active days | 18.15 | 18.04 | -0.57% | 0.02 | No, after Holm correction p = 0.075 |
 | **D1 retention, %** | **41.25** | **39.84** | **-3.43%** | **<0.001** | **Yes** |
 | **D3 retention, %** | **36.55** | **34.52** | **-5.54%** | **<0.001** | **Yes** |
 | **D7 retention, %** | **32.14** | **30.77** | **-4.26%** | **<0.001** | **Yes** |
 | D14 retention, % | 29.74 | 29.66 | -0.28% | 0.78 | No |
 | D28 retention, % | 29.63 | 29.62 | -0.00% | 1.00 | No |
+
+Lift is relative throughout. Retention rows in percentage points: D1 -1.42, D3 -2.02, D7 -1.37, D14 -0.08, D28 0.00. The relative form makes a 1.4-point move read as 3.4% — worth stating explicitly in a ship-or-hold report. p-values are raw; across 11 comparisons only `Active days` changes status under Holm correction.
+
+## Re-audit: what the first readout got wrong
+
+The first version of this analysis recommended **against** shipping B, because early retention fell. That conclusion does not survive scrutiny, and the evidence against it was already in this repository.
+
+**The metric was anchored on the wrong day.** `days_since_first` was computed from each user's first active day *inside the observation window*, not from install. The raw data carries `first_seen`; it is read in the first cell and then never used. For a user already active on day 1 of the window, "D1 retention" therefore means "was active on day 2" — a measure of how activity is spaced, not of whether a cohort survives.
+
+**The direct test contradicts the churn reading.** Whether users left needs no anchor at all: `active_days` per user sits in `data/user_level.csv`, which is committed here.
+
+| Share of users | A | B | Difference |
+|---|---|---|---|
+| 3 or fewer active days | 4.660% | 8.952% | +4.29 pp |
+| 5 or fewer | 12.291% | 14.516% | +2.23 pp |
+| **7 or fewer** | **15.087%** | **15.051%** | **-0.04 pp** |
+| 14 or fewer | 18.941% | 18.672% | -0.27 pp |
+
+The cumulative shares converge by day 7. Band by band, the low-engagement users of A sit at 4-7 active days and those of B at 1-3:
+
+| Active days | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|---|
+| B minus A, pp | +0.52 | +1.93 | +1.85 | -0.17 | -1.90 | -1.52 | -0.74 |
+
+The disengaging segment holds 7,528 users in A and 7,541 in B. Inside it, mean active days are 4.21 against 3.26: same people, about one day earlier.
+
+Supporting evidence, all of it from files published here — mean active days -0.10 (-0.57%); no user in either arm has zero active days; D14 -0.08 pp (p = 0.78) and D28 0.000 pp (p = 1.00); DAU trends upward in both arms, slope +0.95 and +1.67 users per day over a 15,038-15,581 range.
+
+**What it changes.** The feature does not push users out. It compresses the tail-off of a fixed-size, lowest-value segment by about a day while lifting revenue ~9% among the payers who stay. The original recommendation traded $26,279 of measured 59-day revenue against a churn cost that is not there.
+
+Reproduce the check in one command, no raw file needed:
+
+```bash
+python analysis/reaudit_active_days.py
+```
+
 
 ## How to run
 
@@ -79,7 +117,7 @@ Sanity checks:
 
 ## What I would do with more time
 
-- Segment effect by `first_seen` (new vs retained users). Hypothesis: the retention drop in B sits in new users, while retained users show a clean positive effect
+- Recompute the retention curve from `first_seen` rather than from the first active day in the window, and treat users who install mid-experiment as censored instead of counting them in the denominator. The re-audit above settles the churn question without this, but the curve itself is still built on the wrong anchor
 - CUPED with pre-period revenue as a covariate to narrow the ARPU CI
 - Daily SRM check, not just the final one
 - Winsorize revenue at p99 and recompute, to confirm ARPU lift is not pulled by the tail
@@ -88,7 +126,7 @@ These would be done before a final ship decision in a real project.
 
 ## Note on process
 
-Much of the code and write-up was done in pair with Claude (Anthropic) as a pair-programmer. Architecture, metric selection, interpretation, and the validity check of every step stayed with me. AI tooling is a standard part of my workflow, it speeds up scaffolding and helps not miss obvious issues. The final calls (for example, that shipping B as-is is risky because of the retention drop) are mine.
+Much of the code and write-up was done in pair with Claude (Anthropic) as a pair-programmer. Architecture, metric selection, interpretation, and the validity check of every step stayed with me. AI tooling is a standard part of my workflow, it speeds up scaffolding and helps not miss obvious issues. The final calls are mine — including the one I later had to reverse: my first readout treated the early-retention drop as churn, and the re-audit above shows it is not. Finding that in my own work matters more to me than having been right the first time.
 
 ## Disclaimer
 
