@@ -1,6 +1,6 @@
 # A/B Test Analysis: Mobile Game Feature Rollout
 
-Analysis of an A/B experiment in a mobile game. Test assignment for a game studio (brand hidden under NDA, data anonymized). 59-day period, 100k users, two groups roughly 50/50. Goal: measure feature impact on revenue, engagement, retention, and recommend whether to ship B.
+Analysis of an A/B experiment in a mobile game. Test assignment for a game studio (studio not named, data anonymized). 59-day period, 100k users, two groups roughly 50/50. Goal: measure feature impact on revenue, engagement, retention, and recommend whether to ship B.
 
 ## TL;DR
 
@@ -130,7 +130,7 @@ Much of the code and write-up was done in pair with Claude (Anthropic) as a pair
 
 ## Disclaimer
 
-Data is anonymized and published as a portfolio case. Game name, studio name, and the feature itself are hidden under NDA. The dataset structure and metrics are kept untouched so the analysis is reproducible by any reader.
+Data is anonymized and published as a portfolio case with the studio's permission. The studio, the game and the feature are not named. The dataset structure and metrics are kept untouched so the analysis is reproducible by any reader.
 
 ---
 
