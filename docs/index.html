@@ -511,7 +511,7 @@ footer.foot { padding: 3rem 0 4rem; color: var(--ink-2); font-size: .875rem; }
       <div class="head">
         <h2>What looked like the cost</h2>
         <p class="lede">Early retention drops for a full week before the curves meet again. My first readout
-          called that churn and held the release. It is not churn — the next section shows why.</p>
+          called that churn and held the release. It is not churn: the next section shows why.</p>
       </div>
       <div class="card">
         <header>
@@ -567,13 +567,13 @@ footer.foot { padding: 3rem 0 4rem; color: var(--ink-2); font-size: .875rem; }
         </div>
       </div>
       <p class="lede" style="margin-top:1.6rem">The cumulative shares converge by day seven. The disengaging
-        segment holds 7,528 players in A and 7,541 in B — the same group, to within four hundredths of a point.
+        segment holds 7,528 players in A and 7,541 in B: the same group, to within four hundredths of a point.
         Inside it, mean active days are 4.21 against 3.26. B removes nobody. It makes the same players stop
         about a day sooner, and those players have three to four active days out of fifty-nine.</p>
       <p class="note" style="margin-top:.9rem">Day 14 differs by 0.08 points, day 28 by 0.00, no player in
         either arm has zero active days, and daily actives trend upward in both arms across the whole window.
         Reproduce it with <span style="font-family:var(--mono)">python analysis/reaudit_active_days.py</span>
-        in the repository — standard library only, runs on the committed data.</p>
+        in the repository: standard library only, runs on the committed data.</p>
     </div>
   </section>
 
@@ -640,6 +640,7 @@ footer.foot { padding: 3rem 0 4rem; color: var(--ink-2); font-size: .875rem; }
         <li id="m-window"></li>
         <li>Anonymised portfolio dataset</li>
         <li><a href="https://github.com/proggdd/ab-test-mobile-game">Notebook and source data</a></li>
+        <li><a href="https://github.com/proggdd/ab-test-mobile-game/tree/main/sql">Same analysis in SQL (PostgreSQL)</a></li>
       </ul>
     </div>
     <div>
@@ -971,7 +972,7 @@ const d1 = RET.find(r => r.day === 1), d7 = RET.find(r => r.day === 7), d14 = RE
 
 document.getElementById("hero-lede").textContent =
   `A ${M.days} day experiment on ${int(M.users)} players. Revenue per user rose ${signed(R.arpu.lift_pct, 1)}. ` +
-  `Day 1 retention fell ${Math.abs(d1.abs_diff_pp).toFixed(2)} points — and a re-audit of my own analysis ` +
+  `Day 1 retention fell ${Math.abs(d1.abs_diff_pp).toFixed(2)} points, and a re-audit of my own analysis ` +
   `showed that drop is not players leaving.`;
 document.getElementById("hero-val").textContent = signed(R.arpu.lift_pct, 2);
 document.getElementById("hero-cap").textContent =
@@ -1161,7 +1162,7 @@ const cumGap = DATA.daily.cum_gap[DATA.daily.cum_gap.length - 1];
 document.getElementById("tradeoff").innerHTML = `
   <div><dt>What shipping buys</dt><dd>${usd(B.point)} more per player, ${signed(R.arpu.lift_pct, 1)}</dd></div>
   <div><dt>Revenue across the window</dt><dd>$${int(Math.round(cumGap))} in favour of B</dd></div>
-  <div><dt>Players lost</dt><dd>none — disengaging share 15.09% against 15.05%</dd></div>
+  <div><dt>Players lost</dt><dd>none: disengaging share 15.09% against 15.05%</dd></div>
   <div><dt>Gap at day 14</dt><dd>${signed(d14.abs_diff_pp, 2, " pp")}, ${pTxt(d14.p)}</dd></div>`;
 document.getElementById("tradeoff-note").textContent =
   "Day 1 retention still differs, and the difference is real. It measures how activity is spaced, not who " +
