@@ -1,0 +1,32 @@
+-- Same pipeline in PostgreSQL. Run from the repository root:
+--
+--   createdb abtest
+--   psql -d abtest -f sql/run_postgres.psql
+--
+-- With the raw file in data/, also uncomment the two raw lines below. Check the
+-- column list against the header of data/ab_test_data.csv first.
+
+\set ON_ERROR_STOP on
+\ir 00_schema.sql
+
+\copy user_level    FROM 'data/user_level.csv' CSV HEADER
+\copy daily         FROM 'data/daily.csv'      CSV HEADER
+\copy retention_src FROM 'data/retention.csv'  CSV HEADER
+
+-- \copy raw_user_day (user_id, ab_group, date, first_seen, revenue, sessions, time_played, transactions) FROM 'data/ab_test_data.csv' CSV HEADER
+-- \ir 01_raw_to_marts.sql
+
+\ir 02_summary.sql
+\ir 03_significance.sql
+\ir 04_reaudit_active_days.sql
+\ir 05_revenue_distribution.sql
+\ir 06_daily_trends.sql
+\ir 07_tableau_extracts.sql
+
+\copy (SELECT * FROM tableau_kpi)         TO 'tableau/kpi.csv'         CSV HEADER
+\copy (SELECT * FROM tableau_tests)       TO 'tableau/tests.csv'       CSV HEADER
+\copy (SELECT * FROM tableau_daily)       TO 'tableau/daily.csv'       CSV HEADER
+\copy (SELECT * FROM tableau_retention)   TO 'tableau/retention.csv'   CSV HEADER
+\copy (SELECT * FROM tableau_active_days) TO 'tableau/active_days.csv' CSV HEADER
+\copy (SELECT * FROM tableau_payers)      TO 'tableau/payers.csv'      CSV HEADER
+\copy (SELECT * FROM tableau_percentiles) TO 'tableau/percentiles.csv' CSV HEADER

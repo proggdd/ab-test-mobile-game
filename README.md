@@ -8,13 +8,13 @@ Group B shows **+9.21% ARPU lift** versus control A. Statistically significant (
 
 The driver is ARPPU (+10.85%), not conversion. Existing payers spend more in B, but the test did not bring new payers in.
 
-Early-day retention in B reads lower — D1 -1.42 pp, D3 -2.02 pp, D7 -1.37 pp (all p < 0.001) — and my first readout took that as the feature pushing users out. **A later re-audit of my own analysis showed that reading was wrong.** The share of users who disengage is identical in both arms: 15.09% in A against 15.05% in B have 7 or fewer active days out of 59. B removes nobody. It makes the same-sized disengaging segment stop roughly one day sooner.
+Early-day retention in B reads lower (D1 -1.42 pp, D3 -2.02 pp, D7 -1.37 pp, all p < 0.001), and my first readout took that as the feature pushing users out. **A later re-audit of my own analysis showed that reading was wrong.** The share of users who disengage is identical in both arms: 15.09% in A against 15.05% in B have 7 or fewer active days out of 59. B removes nobody. It makes the same-sized disengaging segment stop roughly one day sooner.
 
 **Recommendation: ship B.** Revenue is up ~9% with no incremental churn, identical D14 and D28 retention, and rising DAU in both arms. Watch the early-disengagement cohort, but note what it is: users with 3-4 active days out of 59, the lowest-value segment in the dataset.
 
 Full evidence and the reproduction script: [Re-audit](#re-audit-what-the-first-readout-got-wrong).
 
-**[Interactive dashboard](https://proggdd.github.io/ab-test-mobile-game/)** — explore the full dataset with 5 charts (daily trends, distributions, retention curves, bootstrap confidence intervals) and accompanying data tables.
+**[Interactive dashboard](https://proggdd.github.io/ab-test-mobile-game/)**: explore the full dataset with 5 charts (daily trends, distributions, retention curves, bootstrap confidence intervals) and accompanying data tables.
 
 ## Metrics
 
@@ -32,13 +32,13 @@ Full evidence and the reproduction script: [Re-audit](#re-audit-what-the-first-r
 | D14 retention, % | 29.74 | 29.66 | -0.28% | 0.78 | No |
 | D28 retention, % | 29.63 | 29.62 | -0.00% | 1.00 | No |
 
-Lift is relative throughout. Retention rows in percentage points: D1 -1.42, D3 -2.02, D7 -1.37, D14 -0.08, D28 0.00. The relative form makes a 1.4-point move read as 3.4% — worth stating explicitly in a ship-or-hold report. p-values are raw; across 11 comparisons only `Active days` changes status under Holm correction.
+Lift is relative throughout. Retention rows in percentage points: D1 -1.42, D3 -2.02, D7 -1.37, D14 -0.08, D28 0.00. The relative form makes a 1.4-point move read as 3.4%, which is worth stating explicitly in a ship-or-hold report. p-values are raw; across 11 comparisons only `Active days` changes status under Holm correction.
 
 ## Re-audit: what the first readout got wrong
 
 The first version of this analysis recommended **against** shipping B, because early retention fell. That conclusion does not survive scrutiny, and the evidence against it was already in this repository.
 
-**The metric was anchored on the wrong day.** `days_since_first` was computed from each user's first active day *inside the observation window*, not from install. The raw data carries `first_seen`; it is read in the first cell and then never used. For a user already active on day 1 of the window, "D1 retention" therefore means "was active on day 2" — a measure of how activity is spaced, not of whether a cohort survives.
+**The metric was anchored on the wrong day.** `days_since_first` was computed from each user's first active day *inside the observation window*, not from install. The raw data carries `first_seen`; it is read in the first cell and then never used. For a user already active on day 1 of the window, "D1 retention" therefore means "was active on day 2": a measure of how activity is spaced, not of whether a cohort survives.
 
 **The direct test contradicts the churn reading.** Whether users left needs no anchor at all: `active_days` per user sits in `data/user_level.csv`, which is committed here.
 
@@ -57,7 +57,7 @@ The cumulative shares converge by day 7. Band by band, the low-engagement users 
 
 The disengaging segment holds 7,528 users in A and 7,541 in B. Inside it, mean active days are 4.21 against 3.26: same people, about one day earlier.
 
-Supporting evidence, all of it from files published here — mean active days -0.10 (-0.57%); no user in either arm has zero active days; D14 -0.08 pp (p = 0.78) and D28 0.000 pp (p = 1.00); DAU trends upward in both arms, slope +0.95 and +1.67 users per day over a 15,038-15,581 range.
+Supporting evidence, all of it from files published here: mean active days -0.10 (-0.57%); no user in either arm has zero active days; D14 -0.08 pp (p = 0.78) and D28 0.000 pp (p = 1.00); DAU trends upward in both arms, slope +0.95 and +1.67 users per day over a 15,038-15,581 range.
 
 **What it changes.** The feature does not push users out. It compresses the tail-off of a fixed-size, lowest-value segment by about a day while lifting revenue ~9% among the payers who stay. The original recommendation traded $26,279 of measured 59-day revenue against a churn cost that is not there.
 
@@ -77,6 +77,29 @@ jupyter notebook notebook/ab_test_analysis.ipynb
 
 Run cells in order. The notebook reads `data/ab_test_data.csv`. See `data/README.md` for the raw file (not committed, ~80 MB).
 
+## SQL version
+
+Every number above is recomputed in SQL from the committed CSV files: group summary, SRM, all 11 tests with 95% CIs and Holm correction, the active-days re-audit, payer revenue percentiles and daily trends. The queries are written for PostgreSQL and run unchanged in DuckDB.
+
+```bash
+pip install duckdb
+python sql/run.py
+```
+
+`run.py` loads `data/*.csv`, runs `sql/02` to `sql/07`, compares the results with what the notebook saved (`output/summary_table.csv`, `data/retention.csv`, `docs/data.json`) and writes flat extracts for Tableau to `tableau/`. All 25 checks match. In PostgreSQL: `createdb abtest && psql -d abtest -f sql/run_postgres.psql`.
+
+p-values in SQL come from the normal approximation (Abramowitz and Stegun 26.2.17). The smallest sample is about 8,000 payers per group, and the largest gap to scipy and statsmodels is under 1e-6.
+
+Checks the notebook did not have:
+
+| Check | A | B | Result |
+|---|---|---|---|
+| ARPU with revenue capped at the pooled p99 ($79.53) | 5.27 | 5.68 | +7.83%, z = 4.32: the lift does not come from the tail |
+| Share of payer revenue from the top 1% of payers | 4.23% | 3.96% | B depends on its biggest spenders slightly less |
+| Days on which ARPDAU in B is above A | | | 46 of 59 |
+
+`sql/01_raw_to_marts.sql` rebuilds `user_level.csv`, `daily.csv` and `retention.csv` from the raw user-day file and reconciles them row by row with the notebook output. It also holds the install-anchored retention from the list below. It needs the raw file, so its numbers are not in this README yet; the logic is tested on a synthetic file with the same schema in both PostgreSQL and DuckDB.
+
 ## Repo layout
 
 ```
@@ -89,6 +112,11 @@ Run cells in order. The notebook reads `data/ab_test_data.csv`. See `data/README
 │   └── retention.csv (D1, D3, D7, D14, D28)
 ├── notebook/
 │   └── ab_test_analysis.ipynb
+├── sql/
+│   ├── 00_schema.sql ... 07_tableau_extracts.sql
+│   ├── run.py (DuckDB runner with checks against the notebook)
+│   └── run_postgres.psql
+├── tableau/ (flat extracts for the Tableau dashboard)
 └── output/
     ├── 01_arpdau_daily.png
     ├── 02_cumulative_revenue.png
@@ -117,16 +145,15 @@ Sanity checks:
 
 ## What I would do with more time
 
-- Recompute the retention curve from `first_seen` rather than from the first active day in the window, and treat users who install mid-experiment as censored instead of counting them in the denominator. The re-audit above settles the churn question without this, but the curve itself is still built on the wrong anchor
+- Recompute the retention curve from `first_seen` rather than from the first active day in the window, and treat users who install mid-experiment as censored instead of counting them in the denominator. The re-audit above settles the churn question without this, but the curve itself is still built on the wrong anchor. The query is ready (`retention_install` in `sql/01_raw_to_marts.sql`) and waits for the raw file
 - CUPED with pre-period revenue as a covariate to narrow the ARPU CI
 - Daily SRM check, not just the final one
-- Winsorize revenue at p99 and recompute, to confirm ARPU lift is not pulled by the tail
 
 These would be done before a final ship decision in a real project.
 
 ## Note on process
 
-Much of the code and write-up was done in pair with Claude (Anthropic) as a pair-programmer. Architecture, metric selection, interpretation, and the validity check of every step stayed with me. AI tooling is a standard part of my workflow, it speeds up scaffolding and helps not miss obvious issues. The final calls are mine — including the one I later had to reverse: my first readout treated the early-retention drop as churn, and the re-audit above shows it is not. Finding that in my own work matters more to me than having been right the first time.
+Much of the code and write-up was done in pair with Claude (Anthropic) as a pair-programmer. Architecture, metric selection, interpretation, and the validity check of every step stayed with me. AI tooling is a standard part of my workflow, it speeds up scaffolding and helps not miss obvious issues. The final calls are mine, including the one I later had to reverse: my first readout treated the early-retention drop as churn, and the re-audit above shows it is not. Finding that in my own work matters more to me than having been right the first time.
 
 ## Disclaimer
 
